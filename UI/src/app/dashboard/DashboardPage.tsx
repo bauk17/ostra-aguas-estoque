@@ -1,17 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from "../../components/layout/Sidebar";
-import { Header } from "../../components/layout/Header";
 import { Loader2, CircleDollarSign, TrendingUp, CalendarArrowUp, UserRound, Pencil, ArrowRight } from 'lucide-react';
-// Supondo que você tenha a função no repositório de pedidos para listar com JOIN
 import { listarPedidos } from '../../features/pedidos/repository';
-
 
 interface PedidoRecente {
   id: string;
   cliente: string; // Nome obtido via INNER JOIN no banco
   produto: string;
   quantidade: number;
-  valor_total: number;
+  valor_total: number | string; // Permitindo string caso venha formatado do banco
   status: 'Pendente' | 'Em Rota' | 'Entregue' | string;
 }
 
@@ -19,7 +16,7 @@ export default function DashboardPage() {
   const [pedidos, setPedidos] = useState<PedidoRecente[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Estados para os Cards de Métricas (podem ser buscados dinamicamente no futuro)
+  // Estados para os Cards de Métricas
   const [metricas] = useState({
     vendasMes: 42850.00,
     entregasAtivas: 18,
@@ -31,9 +28,9 @@ export default function DashboardPage() {
       setLoading(true);
       try {
         const todosPedidos = await listarPedidos() as PedidoRecente[];
-        console.error("Erro ao carregar dados do dashboard:");
-        console.log(todosPedidos);
         setPedidos(todosPedidos);
+      } catch (error) {
+        console.error("Erro ao carregar dados do dashboard:", error);
       } finally {
         setLoading(false);
       }
@@ -42,32 +39,15 @@ export default function DashboardPage() {
     buscarDadosDashboard();
   }, []);
 
-  // Função auxiliar para gerar a sigla/avatar do cliente
-  const obterIniciais = (nome: string) => {
-    if (!nome) return '??';
-    const partes = nome.trim().split(' ');
-    if (partes.length >= 2) return (partes[0][0] + partes[1][0]).toUpperCase();
-    return partes[0].substring(0, 2).toUpperCase();
-  };
-
-  // Retorna a cor do avatar baseado no nome para dar variedade visual
-  const obterCorAvatar = (nome: string) => {
-    const cores = [
-      'bg-blue-100 text-blue-600',
-      'bg-slate-100 text-slate-600',
-      'bg-indigo-100 text-indigo-600',
-      'bg-cyan-100 text-cyan-600'
-    ];
-    const index = nome ? nome.length % cores.length : 0;
-    return cores[index];
-  };
+  // --- LÓGICA DE LIMITAÇÃO ---
+  // Pega apenas os 5 primeiros pedidos retornados do repositório
+  const pedidosRecentes = pedidos.slice(0, 5);
 
   return (
     <div className="min-h-screen bg-background font-body-md antialiased text-on-background">
       <Sidebar />
       
-      <main className="ml-72 min-h-screen bg-[#f9f9f9]">
-        
+      <main className="min-h-screen bg-[#f9f9f9]">
         
         {/* Dashboard Canvas Container */}
         <div className="p-8 space-y-8">
@@ -77,8 +57,6 @@ export default function DashboardPage() {
             <div>
               <h2 className="font-headline-lg text-3xl font-bold text-primary">Gerenciamento de Pedidos</h2>
               <p className="text-body-md text-slate-500">Visão geral das operações de hoje.</p>
-            </div>
-            <div className="flex gap-3">
             </div>
           </div>
 
@@ -136,7 +114,7 @@ export default function DashboardPage() {
             <div className="p-8 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <h4 className="font-headline-sm text-lg font-bold text-primary">Pedidos Recentes</h4>
-                <p className="text-sm text-slate-500">Últimas transações sincronizadas com o banco local</p>
+                <p className="text-sm text-slate-500">Últimas 5 transações sincronizadas com o banco local</p>
               </div>
               <button className="text-secondary text-sm font-bold flex items-center gap-1 hover:underline">
                 Visualizar todos <span className="material-symbols-outlined text-sm"><ArrowRight /></span>
@@ -165,58 +143,66 @@ export default function DashboardPage() {
                         </div>
                       </td>
                     </tr>
-                  ) : pedidos.length === 0 ? (
+                  ) : pedidosRecentes.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-8 py-12 text-center text-sm text-slate-400 font-medium">
                         Nenhum pedido registrado hoje.
                       </td>
                     </tr>
                   ) : (
-                    pedidos.map((pedido) => (
-                      <tr key={pedido.id} className="hover:bg-blue-50/30 transition-colors">
-                        <td className="px-8 py-4 font-mono text-xs text-slate-600">
-                          #OA-{pedido.id.substring(0, 4).toUpperCase()}
-                        </td>
-                        <td className="px-8 py-4">
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-semibold text-slate-700">{pedido.cliente}</span>
-                          </div>
-                        </td>
-                        <td className="px-8 py-4 text-sm text-slate-600">
-                          {pedido.quantidade}x {pedido.produto.split(' - ')[0]}
-                        </td>
-                        <td className="px-8 py-4 font-bold text-primary text-sm">
-                          {pedido.valor_total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </td>
-                        <td className="px-8 py-4">
-                          {pedido.status === 'Pendente' && (
-                            <span className="px-3 py-1 bg-amber-50 text-amber-600 text-xs font-bold rounded-full flex items-center gap-1 w-fit">
-                              <span className="w-1.5 h-1.5 bg-amber-500 rounded-full"></span> Pendente
-                            </span>
-                          )}
-                          {pedido.status === 'Em Rota' && (
-                            <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full flex items-center gap-1 w-fit">
-                              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span> Em Rota
-                            </span>
-                          )}
-                          {pedido.status === 'Entregue' && (
-                            <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-xs font-bold rounded-full flex items-center gap-1 w-fit">
-                              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Entregue
-                            </span>
-                          )}
-                          {pedido.status !== 'Pendente' && pedido.status !== 'Em Rota' && pedido.status !== 'Entregue' && (
-                            <span className="px-3 py-1 bg-slate-50 text-slate-600 text-xs font-bold rounded-full flex items-center gap-1 w-fit">
-                              <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span> {pedido.status}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-8 py-4">
-                          <button className="material-symbols-outlined text-slate-400 hover:text-primary transition-colors text-xl">
-                            <Pencil/>
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                    // Mapeando a lista cortada de apenas 5 itens
+                    pedidosRecentes.map((pedido) => {
+                      // Garante que o valor total seja tratado como número para a formatação
+                      const valorNumerico = typeof pedido.valor_total === 'string' 
+                        ? parseFloat(pedido.valor_total.replace(/[^\d,.-]/g, '').replace(',', '.')) 
+                        : pedido.valor_total;
+
+                      return (
+                        <tr key={pedido.id} className="hover:bg-blue-50/30 transition-colors">
+                          <td className="px-8 py-4 font-mono text-xs text-slate-600">
+                            #OA-{pedido.id.substring(0, 4).toUpperCase()}
+                          </td>
+                          <td className="px-8 py-4">
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-semibold text-slate-700">{pedido.cliente}</span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-4 text-sm text-slate-600">
+                            {pedido.quantidade}x {pedido.produto ? pedido.produto.split(' - ')[0] : ''}
+                          </td>
+                          <td className="px-8 py-4 font-bold text-primary text-sm">
+                            {isNaN(valorNumerico) ? pedido.valor_total : valorNumerico.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </td>
+                          <td className="px-8 py-4">
+                            {pedido.status === 'Pendente' && (
+                              <span className="px-3 py-1 bg-amber-50 text-amber-600 text-xs font-bold rounded-full flex items-center gap-1 w-fit">
+                                <span className="w-1.5 h-1.5 bg-amber-500 rounded-full"></span> Pendente
+                              </span>
+                            )}
+                            {pedido.status === 'Em Rota' && (
+                              <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full flex items-center gap-1 w-fit">
+                                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span> Em Rota
+                              </span>
+                            )}
+                            {pedido.status === 'Entregue' && (
+                              <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-xs font-bold rounded-full flex items-center gap-1 w-fit">
+                                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Entregue
+                              </span>
+                            )}
+                            {pedido.status !== 'Pendente' && pedido.status !== 'Em Rota' && pedido.status !== 'Entregue' && (
+                              <span className="px-3 py-1 bg-slate-50 text-slate-600 text-xs font-bold rounded-full flex items-center gap-1 w-fit">
+                                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span> {pedido.status}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-8 py-4">
+                            <button className="material-symbols-outlined text-slate-400 hover:text-primary transition-colors text-xl">
+                              <Pencil/>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -225,11 +211,6 @@ export default function DashboardPage() {
 
         </div>
       </main>
-
-      {/* Atmospheric Liquid Background Glow */}
-      <div className="fixed bottom-0 right-0 -z-10 opacity-10 pointer-events-none translate-x-1/4 translate-y-1/4">
-        <div className="w-[600px] h-[600px] bg-gradient-to-br from-[#2dbcfe] to-[#00658d] rounded-full blur-[120px]"></div>
-      </div>
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { ArrowDown, Minus, Plus, ShoppingCart, UserRoundSearch, ChevronDown, Loader2 } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
-import { criarPedido } from '../../features/pedidos/repository';
+import { criarPedido } from '../repository';
 // Supondo que listarClientes venha do seu repositório de clientes (ajuste o caminho se necessário)
-import { listarClientes } from '../../features/clientes/repository'; 
+import { listarClientes } from '../../clientes/repository'; 
 
 interface Client {
   id: string;

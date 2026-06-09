@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Search, 
   UserPlus, 
   Users, 
-  Filter, 
   MoreVertical, 
   ChevronLeft, 
   ChevronRight,
@@ -11,7 +10,7 @@ import {
   MapPin,
   Phone
 } from 'lucide-react';
-import AddClienteModal from '../../components/forms/AddCustomer';
+import AddClienteModal from '../../features/clientes/components/AddCustomer';
 import { listarClientes } from '../../features/clientes/repository';
 
 // Interface mapeada exatamente igual à estrutura do seu banco de dados
@@ -30,6 +29,10 @@ const ClientesPage = () => {
   const [loading, setLoading] = useState(true);
   const [filtroTexto, setFiltroTexto] = useState('');
 
+  // --- ESTADOS PARA PAGINAÇÃO ---
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const itensPorPagina = 5;
+
   // Carrega os clientes do repositório
   const carregarClientes = async () => {
     setLoading(true);
@@ -47,6 +50,11 @@ const ClientesPage = () => {
     carregarClientes();
   }, []);
 
+  // Reseta para a primeira página quando o usuário filtra/pesquisa algo
+  useEffect(() => {
+    setPaginaAtual(1);
+  }, [filtroTexto]);
+
   // Gera as iniciais do avatar com base no nome do cliente
   const obterIniciais = (nome: string) => {
     if (!nome) return '??';
@@ -57,12 +65,22 @@ const ClientesPage = () => {
     return partes[0].substring(0, 2).toUpperCase();
   };
 
-  // Filtra os clientes dinamicamente por Nome ou Telefone
+  // --- 1. Filtragem dinâmica ---
   const clientesFiltrados = clientes.filter(cliente => {
     const nomeBate = cliente.nome.toLowerCase().includes(filtroTexto.toLowerCase());
     const telefoneBate = cliente.telefone ? cliente.telefone.includes(filtroTexto) : false;
     return nomeBate || telefoneBate;
   });
+
+  // --- 2. Lógica Matemática da Paginação (Corte dos Itens) ---
+  const indiceUltimoItem = paginaAtual * itensPorPagina;
+  const indicePrimeiroItem = indiceUltimoItem - itensPorPagina;
+  
+  // Lista final contendo apenas os 5 clientes da página atual
+  const clientesPaginados = clientesFiltrados.slice(indicePrimeiroItem, indiceUltimoItem);
+
+  // Calcula a quantidade total de páginas
+  const totalPaginas = Math.ceil(clientesFiltrados.length / itensPorPagina);
 
   return (
     <div className="min-h-screen bg-[#f9f9f9] p-8">
@@ -135,14 +153,15 @@ const ClientesPage = () => {
                     </div>
                   </td>
                 </tr>
-              ) : clientesFiltrados.length === 0 ? (
+              ) : clientesPaginados.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-8 py-12 text-center text-sm font-medium text-slate-400">
                     Nenhum cliente encontrado.
                   </td>
                 </tr>
               ) : (
-                clientesFiltrados.map((cliente) => (
+                // Mapeia a lista fatiada (máximo de 5 registros)
+                clientesPaginados.map((cliente) => (
                   <tr key={cliente.id} className="hover:bg-blue-50/30 transition-colors group">
                     {/* Nome & ID */}
                     <td className="px-8 py-5">
@@ -198,18 +217,52 @@ const ClientesPage = () => {
           </table>
         </div>
 
-        {/* Footer */}
+        {/* Footer com Paginação Ativa */}
         <div className="px-8 py-6 bg-slate-50/50 flex items-center justify-between border-t border-blue-50">
           <p className="text-sm text-slate-500">
-            Exibindo <span className="font-bold text-[#001e40]">{clientesFiltrados.length}</span> de <span className="font-bold text-[#001e40]">{clientes.length}</span> clientes
+            Exibindo <span className="font-bold text-[#001e40]">{indicePrimeiroItem + 1}</span> - <span className="font-bold text-[#001e40]">{Math.min(indiceUltimoItem, clientesFiltrados.length)}</span> de <span className="font-bold text-[#001e40]">{clientesFiltrados.length}</span> clientes
           </p>
+          
           <div className="flex items-center gap-2">
-            <button className="w-10 h-10 rounded-lg border border-blue-100 flex items-center justify-center text-slate-400 hover:bg-white transition-all"><ChevronLeft size={20}/></button>
-            <button className="w-10 h-10 rounded-lg bg-[#00658d] text-white font-bold flex items-center justify-center">1</button>
-            <button className="w-10 h-10 rounded-lg border border-transparent flex items-center justify-center text-slate-500 hover:bg-white">2</button>
-            <button className="w-10 h-10 rounded-lg border border-transparent flex items-center justify-center text-slate-500 hover:bg-white">3</button>
-            <span className="text-slate-400 px-2">...</span>
-            <button className="w-10 h-10 rounded-lg border border-blue-100 flex items-center justify-center text-slate-400 hover:bg-white transition-all"><ChevronRight size={20}/></button>
+            {/* Botão Anterior */}
+            <button 
+              onClick={() => setPaginaAtual(prev => Math.max(prev - 1, 1))}
+              disabled={paginaAtual === 1}
+              className={`w-10 h-10 rounded-lg border border-blue-100 flex items-center justify-center transition-all ${
+                paginaAtual === 1 ? 'text-slate-200 cursor-not-allowed bg-slate-50' : 'text-slate-400 hover:bg-white'
+              }`}
+            >
+              <ChevronLeft size={20}/>
+            </button>
+
+            {/* Numeração de Páginas Dinâmicas */}
+            {Array.from({ length: totalPaginas }, (_, index) => {
+              const numeroDaPagina = index + 1;
+              return (
+                <button
+                  key={numeroDaPagina}
+                  onClick={() => setPaginaAtual(numeroDaPagina)}
+                  className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${
+                    paginaAtual === numeroDaPagina
+                      ? 'bg-[#00658d] text-white shadow-xs'
+                      : 'border border-transparent text-slate-500 hover:bg-white'
+                  }`}
+                >
+                  {numeroDaPagina}
+                </button>
+              );
+            })}
+
+            {/* Botão Próximo */}
+            <button 
+              onClick={() => setPaginaAtual(prev => Math.min(prev + 1, totalPaginas))}
+              disabled={paginaAtual === totalPaginas || totalPaginas === 0}
+              className={`w-10 h-10 rounded-lg border border-blue-100 flex items-center justify-center transition-all ${
+                paginaAtual === totalPaginas || totalPaginas === 0 ? 'text-slate-200 cursor-not-allowed bg-slate-50' : 'text-slate-400 hover:bg-white'
+              }`}
+            >
+              <ChevronRight size={20}/>
+            </button>
           </div>
         </div>
       </div>

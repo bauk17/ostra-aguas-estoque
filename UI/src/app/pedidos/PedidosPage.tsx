@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Search,Truck, ReceiptText, Clock, CheckCircle2, 
+  Search, ReceiptText, Clock, CheckCircle2, 
   Calendar, Filter, ChevronLeft, ChevronRight,
-  Eye, Edit3, Award, ShoppingCart, Loader2
+  Eye, Edit3, ShoppingCart, Loader2
 } from 'lucide-react';
-import AddPedidoModal from '../../components/forms/AddPedido';
+import AddPedidoModal from "../../features/pedidos/components/AddPedido";
 import { formatarData } from '../../utilities/formatarData';
-import { listarPedidos } from "../../features/pedidos/repository"
+import { listarPedidos } from "../../features/pedidos/repository";
 
 // --- Tipagens ---
 interface Pedido {
@@ -23,11 +23,16 @@ interface Pedido {
 
 const PedidosPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('Todos');
+  const [filtroTexto, setFiltroTexto] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Função para buscar os pedidos do repositório
+  // --- NOVOS ESTADOS PARA PAGINAÇÃO ---
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const itensPorPagina = 5;
+
+  // Carrega os pedidos ao montar a tela
   const carregarPedidos = async () => {
     setLoading(true);
     try {
@@ -40,10 +45,40 @@ const PedidosPage: React.FC = () => {
     }
   };
 
-  // Carrega os pedidos ao montar a tela
   useEffect(() => {
     carregarPedidos();
   }, []);
+
+  // Toda vez que o usuário mudar o filtro de status ou digitar na busca, 
+  // nós resetamos ele para a primeira página para evitar bugs visuais.
+  useEffect(() => {
+    setPaginaAtual(1);
+  }, [activeTab, filtroTexto]);
+
+  // --- 1. Filtragem ---
+  const pedidosFiltrados = pedidos.filter(pedido => {
+    const bateTexto = 
+      pedido.cliente.toLowerCase().includes(filtroTexto.toLowerCase()) ||
+      pedido.id.toLowerCase().includes(filtroTexto.toLowerCase());
+
+    if (activeTab === 'Todos') return bateTexto;
+    return bateTexto && pedido.status === activeTab;
+  });
+
+  // --- 2. Lógica Matemática da Paginação (Corte dos Itens) ---
+  const indiceUltimoItem = paginaAtual * itensPorPagina;
+  const indicePrimeiroItem = indiceUltimoItem - itensPorPagina;
+  
+  // Esta é a lista final de apenas 5 itens que vai para a tela!
+  const pedidosPaginados = pedidosFiltrados.slice(indicePrimeiroItem, indiceUltimoItem);
+
+  // Calcula o total de páginas necessário
+  const totalPaginas = Math.ceil(pedidosFiltrados.length / itensPorPagina);
+
+  // --- Contadores Dinâmicos para os Cards ---
+  const totalHoje = pedidos.length;
+  const totalPendentes = pedidos.filter(p => p.status === 'Pendente').length;
+  const totalConcluidos = pedidos.filter(p => p.status === 'Entregue').length;
 
   const getStatusStyle = (status: string) => {
     switch (status) {
@@ -71,6 +106,8 @@ const PedidosPage: React.FC = () => {
             <input 
               type="text" 
               placeholder="Buscar por cliente ou ID..." 
+              value={filtroTexto}
+              onChange={(e) => setFiltroTexto(e.target.value)}
               className="w-full bg-white border border-slate-200 rounded-full pl-11 pr-4 py-2.5 text-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all"
             />
           </div>
@@ -88,16 +125,15 @@ const PedidosPage: React.FC = () => {
       {/* Cards de Métricas */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
         {[
-          { label: 'Pedidos Hoje', value: '124', trend: '+12% vs ontem', icon: <ReceiptText size={24}/>, bg: 'bg-white', iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },
-          { label: 'Em Rota', value: '42', sub: '6 caminhões ativos', icon: <Truck size={24}/>, bg: 'bg-white', iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },
-          { label: 'Pendentes', value: '18', sub: 'Aguardando separação', icon: <Clock size={24}/>, bg: 'bg-white', iconBg: 'bg-amber-50', iconColor: 'text-amber-600' },
-          { label: 'Concluídos', value: '64', sub: 'Últimas 8 horas', icon: <CheckCircle2 size={24}/>, bg: 'bg-white', iconBg: 'bg-green-50', iconColor: 'text-green-600' },
+          { label: 'Pedidos Cadastrados', value: loading ? '...' : totalHoje, trend: 'Total geral no banco', icon: <ReceiptText size={24}/>, bg: 'bg-white', iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },
+          { label: 'Pendentes', value: loading ? '...' : totalPendentes, sub: 'Aguardando entrega', icon: <Clock size={24}/>, bg: 'bg-white', iconBg: 'bg-amber-50', iconColor: 'text-amber-600' },
+          { label: 'Concluidos (Entregues)', value: loading ? '...' : totalConcluidos, sub: 'Finalizados com sucesso', icon: <CheckCircle2 size={24}/>, bg: 'bg-white', iconBg: 'bg-green-50', iconColor: 'text-green-600' },
         ].map((card, i) => (
           <div key={i} className="bg-white p-6 rounded-2xl shadow-xs border border-slate-100 flex justify-between items-center">
             <div>
               <p className="text-xs font-semibold text-slate-400 mb-1">{card.label}</p>
               <h3 className="text-3xl font-bold text-[#001e40] font-manrope">{card.value}</h3>
-              {card.trend && <p className="text-[10px] text-green-600 font-bold mt-2">▲ {card.trend}</p>}
+              {card.trend && <p className="text-[10px] text-blue-600 font-bold mt-2">ℹ {card.trend}</p>}
               {card.sub && <p className="text-[10px] text-slate-400 font-medium mt-2">{card.sub}</p>}
             </div>
             <div className={`p-3.5 h-fit rounded-xl ${card.iconBg} ${card.iconColor}`}>
@@ -110,7 +146,7 @@ const PedidosPage: React.FC = () => {
       {/* Barra de Filtros */}
       <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-100 flex flex-col sm:flex-row gap-4 items-center justify-between mb-6">
         <div className="flex flex-wrap gap-2">
-          {['Todos', 'Pendente', 'Em Rota', 'Entregue', 'Cancelado'].map(tag => (
+          {['Todos', 'Pendente', 'Entregue', 'Cancelado'].map(tag => (
             <button
               key={tag}
               onClick={() => setActiveTab(tag)}
@@ -118,14 +154,14 @@ const PedidosPage: React.FC = () => {
                 activeTab === tag ? 'bg-[#001e40] text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'
               }`}
             >
-              {tag}
+              {tag === 'Entregue' ? 'Concluídos' : tag}
             </button>
           ))}
         </div>
         <div className="flex items-center gap-3 self-end sm:self-auto">
           <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl">
             <Calendar size={16} className="text-slate-400" />
-            <span className="text-xs font-bold text-slate-600">Hoje, 24 Mai</span>
+            <span className="text-xs font-bold text-slate-600">Hoje, {new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}</span>
           </div>
           <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50">
             <Filter size={16} /> Filtros
@@ -139,7 +175,6 @@ const PedidosPage: React.FC = () => {
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50/50 border-b border-slate-100 text-[10px] uppercase tracking-widest font-bold text-slate-400">
               <tr>
-                
                 <th className="px-6 py-4">Cliente</th>
                 <th className="px-6 py-4">Endereço</th>
                 <th className="px-6 py-4">Produto</th>
@@ -160,24 +195,22 @@ const PedidosPage: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ) : pedidos.length === 0 ? (
+              ) : pedidosPaginados.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-10 text-center text-sm font-medium text-slate-400">
                     Nenhum pedido encontrado.
                   </td>
                 </tr>
               ) : (
-                pedidos.map((pedido, index) => (
-                  <tr key={index} className="hover:bg-blue-50/30 transition-colors group">
-                    
+                // Mapeia a lista paginada de 5 itens
+                pedidosPaginados.map((pedido, index) => (
+                  <tr key={pedido.id || index} className="hover:bg-blue-50/30 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className="text-sm font-bold text-slate-700">{pedido.cliente}</span>
-                        
                       </div>
-                    
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-500 max-w-[200px] truncate">{pedido.endereco.toUpperCase()}</td>
+                    <td className="px-6 py-4 text-sm text-slate-500 max-w-[200px] truncate">{pedido.endereco?.toUpperCase()}</td>
                     <td className="px-6 py-4">
                       <span className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded border border-blue-100">{pedido.produto}</span>
                     </td>
@@ -202,15 +235,52 @@ const PedidosPage: React.FC = () => {
           </table>
         </div>
         
-        {/* Paginação */}
+        {/* Footer de Paginação Dinâmica */}
         <div className="px-6 py-4 flex items-center justify-between bg-slate-50/30 border-t border-slate-100">
-          <span className="text-xs font-medium text-slate-400">Mostrando {pedidos.length} de 1,240 pedidos</span>
-          <div className="flex gap-1">
-            <button className="p-1.5 rounded border border-slate-200 text-slate-300"><ChevronLeft size={18}/></button>
-            <button className="px-3 py-1 rounded bg-[#001e40] text-white text-xs font-bold shadow-xs">1</button>
-            <button className="px-3 py-1 rounded border border-slate-200 text-slate-500 text-xs font-bold">2</button>
-            <button className="px-3 py-1 rounded border border-slate-200 text-slate-500 text-xs font-bold">3</button>
-            <button className="p-1.5 rounded border border-slate-200 text-slate-300"><ChevronRight size={18}/></button>
+          <span className="text-xs font-medium text-slate-400">
+            Mostrando {indicePrimeiroItem + 1} - {Math.min(indiceUltimoItem, pedidosFiltrados.length)} de {pedidosFiltrados.length} pedidos
+          </span>
+          
+          <div className="flex gap-1 items-center">
+            {/* Botão de Voltar */}
+            <button 
+              onClick={() => setPaginaAtual(prev => Math.max(prev - 1, 1))}
+              disabled={paginaAtual === 1}
+              className={`p-1.5 rounded border border-slate-200 transition-all ${
+                paginaAtual === 1 ? 'text-slate-200 cursor-not-allowed' : 'text-slate-500 hover:bg-white'
+              }`}
+            >
+              <ChevronLeft size={18}/>
+            </button>
+
+            {/* Renderização Inteligente das Páginas Dinâmicas */}
+            {Array.from({ length: totalPaginas }, (_, index) => {
+              const numeroDaPagina = index + 1;
+              return (
+                <button
+                  key={numeroDaPagina}
+                  onClick={() => setPaginaAtual(numeroDaPagina)}
+                  className={`px-3 py-1 rounded text-xs font-bold transition-all ${
+                    paginaAtual === numeroDaPagina
+                      ? 'bg-[#001e40] text-white shadow-xs'
+                      : 'border border-slate-200 text-slate-500 hover:bg-white'
+                  }`}
+                >
+                  {numeroDaPagina}
+                </button>
+              );
+            })}
+
+            {/* Botão de Avançar */}
+            <button 
+              onClick={() => setPaginaAtual(prev => Math.min(prev + 1, totalPaginas))}
+              disabled={paginaAtual === totalPaginas || totalPaginas === 0}
+              className={`p-1.5 rounded border border-slate-200 transition-all ${
+                paginaAtual === totalPaginas || totalPaginas === 0 ? 'text-slate-200 cursor-not-allowed' : 'text-slate-500 hover:bg-white'
+              }`}
+            >
+              <ChevronRight size={18}/>
+            </button>
           </div>
         </div>
       </div>

@@ -10,6 +10,8 @@ export async function criarCarga(data: {
   custo_unitario: number;
   preco_venda?: number;
   lucro_esperado?: number;
+  created_at: string;
+  updated_at: string;
   quebras?: number;
 }) {
   const db = await getDb();

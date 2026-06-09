@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CircleX, Save, UserRoundPlus } from 'lucide-react';
-import { criarCliente } from "../../features/clientes/repository"
+import { criarCliente } from "../repository"
 
 interface Props {
   open: boolean;

@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { listarClientes } from "./features/clientes/repository";
 import { Sidebar } from "./components/layout/Sidebar";
 import DashboardPage from "./app/dashboard/DashboardPage";
 import CargasPage from "./app/cargas/CargasPage";
@@ -8,16 +7,6 @@ import ClientesPage from "./app/clientes/ClientesPage";
 import PedidosPage from "./app/pedidos/PedidosPage";
 
 function App() {
-  const [clientes, setClientes] = useState<any[]>([]);
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function load() {
-    const data = await listarClientes();
-    setClientes(data);
-  }
 
   return (
     <BrowserRouter>
