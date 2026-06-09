@@ -7,7 +7,7 @@ import ClientesPage from "./app/clientes/ClientesPage";
 import PedidosPage from "./app/pedidos/PedidosPage";
 
 function App() {
-
+  {console.log("Rotas configuradas: /dashboard, /cargas, /clientes, /pedidos")}
   return (
     <BrowserRouter>
       <div className="flex min-h-screen bg-background">
