@@ -130,7 +130,6 @@ export default function DashboardPage() {
                     <th className="px-8 py-4">Produto</th>
                     <th className="px-8 py-4">Valor</th>
                     <th className="px-8 py-4">Status</th>
-                    <th className="px-8 py-4">Ação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -194,11 +193,6 @@ export default function DashboardPage() {
                                 <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span> {pedido.status}
                               </span>
                             )}
-                          </td>
-                          <td className="px-8 py-4">
-                            <button className="material-symbols-outlined text-slate-400 hover:text-primary transition-colors text-xl">
-                              <Pencil/>
-                            </button>
                           </td>
                         </tr>
                       );

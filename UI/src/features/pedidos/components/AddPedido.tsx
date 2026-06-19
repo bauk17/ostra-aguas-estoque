@@ -1,7 +1,7 @@
-import { ArrowDown, Minus, Plus, ShoppingCart, UserRoundSearch, ChevronDown, Loader2 } from 'lucide-react';
+import { ArrowDown, Minus, Plus, ShoppingCart, UserRoundSearch, ChevronDown, Loader2, X, Save } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { criarPedido } from '../repository';
-// Supondo que listarClientes venha do seu repositório de clientes (ajuste o caminho se necessário)
+
 import { listarClientes } from '../../clientes/repository'; 
 
 interface Client {
@@ -159,7 +159,7 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
             onClick={onClose}
             className="p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors"
           >
-            <span className="material-symbols-outlined">close</span>
+            <span className="material-symbols-outlined"><X /></span>
           </button>
         </div>
 
@@ -337,7 +337,7 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
               disabled={loading}
               className="bg-[#001e40] text-white px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider flex items-center gap-2 shadow-lg hover:scale-[0.98] active:scale-95 transition-all disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-lg">save</span>
+              <Save className="text-lg" />
               {loading ? 'Salvando...' : 'Salvar Pedido'}
             </button>
           </div>

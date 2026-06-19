@@ -72,3 +72,12 @@ export const atualizarStatusPedido = async (id: string, status: string) => {
         [status, id]
     );
 }
+
+export const deletarPedido = async (id: string) => {
+    const db = await getDb();
+
+    await db.execute(
+        `DELETE FROM pedidos WHERE id = ?`,
+        [id]
+    );
+}

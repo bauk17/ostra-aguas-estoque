@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Package, Users, ShoppingCart, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, Users, ShoppingCart, LogOut, NotebookText } from 'lucide-react';
 
 export const Sidebar = () => {
   return (
@@ -14,6 +14,8 @@ export const Sidebar = () => {
         <NavItem to="/cargas" icon={<Package size={20} />} label="Cargas" />
         <NavItem to="/clientes" icon={<Users size={20} />} label="Clientes" />
         <NavItem to="/pedidos" icon={<ShoppingCart size={20} />} label="Pedidos" />
+        <NavItem to="/movimentacoes" icon={<NotebookText size={20} />} label="Relatório" />
+        <NavItem to="/backups" icon={<NotebookText size={20} />} label="Backups" />
       </nav>
 
       

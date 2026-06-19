@@ -1,14 +1,16 @@
 import { criarCarga } from '../repository';
 import { calcularLucro } from '../utils/calcularLucro';
+import { criarMovimentacao } from "../../movimentacoes/repository"
 
 interface CriarCargaDTO {
   produto: string;
-  quantidade: string;
-  custo_unitario: string;
-  preco_venda: string;
-  quebras?: string;
+  quantidade: number;
+  custo_unitario: number;
+  preco_venda: number;
+  quebras?: number;
   created_at?: string;
   updated_at?: string;
+  retornaveis?: number;
 }
 
 export async function criarCargaService(data: CriarCargaDTO) {
@@ -40,8 +42,12 @@ export async function criarCargaService(data: CriarCargaDTO) {
     quantidade
   );
 
-  return criarCarga({
-    id: crypto.randomUUID(),
+  const cargaId = crypto.randomUUID();
+
+  console.log("Criando carga");
+
+  const carga = await criarCarga({
+    id: cargaId,
     produto: data.produto,
     quantidade,
     custo_unitario: custoUnitario,
@@ -49,6 +55,25 @@ export async function criarCargaService(data: CriarCargaDTO) {
     lucro_esperado: lucroCalculado,
     quebras,
     created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
   });
+  console.log("Carga criada");
+
+  console.log("Criando movimentação");
+
+
+  
+  await criarMovimentacao({
+    id: crypto.randomUUID(),
+    tipo: 'entrada',
+    origem: 'carga',
+    produto: data.produto,
+    referencia_id: cargaId,
+    quantidade,
+    created_at: new Date().toISOString(),
+  });
+
+
+  
+  console.log("Movimentação criada");
+  return carga;
 }

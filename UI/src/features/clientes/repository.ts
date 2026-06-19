@@ -28,3 +28,21 @@ export async function listarClientes(): Promise<Cliente[]> {
 
   return result as Cliente[];
 }
+
+export const deletarCliente = async (id: string) => {
+    const db = await getDb();
+
+    await db.execute(
+        `DELETE FROM clientes WHERE id = ?`,
+        [id]
+    );
+}
+
+export const atualizarStatusCliente = async (id: string, status: string) => {
+    const db = await getDb();
+
+    await db.execute(
+        `UPDATE clientes SET status = ? WHERE id = ?`,
+        [status, id]
+    );
+}

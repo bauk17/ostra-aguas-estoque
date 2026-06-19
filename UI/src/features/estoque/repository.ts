@@ -1,19 +1,7 @@
 import { getDb } from "../../lib/db/client";
-
 import type { Carga } from "./types"; 
-import type { Movimentacao } from "./types";
 
-export async function criarCarga(data: {
-  id: string;
-  produto: string;
-  quantidade: number;
-  custo_unitario: number;
-  preco_venda?: number;
-  lucro_esperado?: number;
-  created_at: string;
-  updated_at: string;
-  quebras?: number;
-}) {
+export async function criarCarga(data: Carga) {
   const db = await getDb();
 
   await db.execute(
@@ -30,7 +18,7 @@ export async function criarCarga(data: {
       new Date().toISOString(),
     ]
   );
-
+ 
 
 }
 
@@ -45,29 +33,11 @@ export async function listarCargas(): Promise<Carga[]> {
 }
 
 
-export async function criarMovimentacao(m: Movimentacao) {
+export async function deletarCarga(id: string) {
   const db = await getDb();
 
   await db.execute(
-    'INSERT INTO movimentacoes (id, produto, quantidade, tipo, origem, referencia_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [
-      m.id,
-      m.produto,
-      m.quantidade,
-      m.tipo,
-      m.origem,
-      m.referencia_id ?? null,
-      m.created_at,
-    ] 
-  )
-}
-
-export async function listarMovimentacoes(): Promise<Movimentacao[]> {
-  const db = await getDb();
-
-  const result = await db.select(
-    `SELECT * FROM movimentacoes ORDER BY created_at DESC`
+    `DELETE FROM cargas WHERE id = ?`,
+    [id]
   );
-
-  return result as Movimentacao[];
 }

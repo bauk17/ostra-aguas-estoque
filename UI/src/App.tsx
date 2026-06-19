@@ -5,16 +5,34 @@ import DashboardPage from "./app/dashboard/DashboardPage";
 import CargasPage from "./app/cargas/CargasPage";
 import ClientesPage from "./app/clientes/ClientesPage";
 import PedidosPage from "./app/pedidos/PedidosPage";
+import MovimentacoesPage from "./app/movimentacoes/MovimentacoesPage";
+import BackupPage from "./app/backups/BackupPage";
+import { useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
 
 function App() {
-  {console.log("Rotas configuradas: /dashboard, /cargas, /clientes, /pedidos")}
+  
+  useEffect(() => {
+    async function verificarBackupDiario() {
+      try {
+        const resultado = await invoke<boolean>("verificar_backup_diario");
+        if (resultado) {
+          alert("Um backup diário foi criado com sucesso!");
+        }
+      } catch (error) {
+        console.error(error);
+        alert("Erro ao verificar backup diário");
+      }
+    }
+
+    verificarBackupDiario();
+  }, []);
+
   return (
     <BrowserRouter>
       <div className="flex min-h-screen bg-background">
-        {/* Sidebar fixa em todas as páginas */}
         <Sidebar />
 
-        {/* Conteúdo dinâmico (com margem à esquerda para não ficar sob a sidebar) */}
         <main className="flex-1 ml-64">
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" />} />
@@ -24,8 +42,11 @@ function App() {
             {/* Rota para Clientes (você pode criar o ClientesPage depois) */}
             <Route path="/clientes" element={<ClientesPage />} />
             <Route path="/pedidos" element={<PedidosPage />} />
+            <Route path="/movimentacoes" element={<MovimentacoesPage />} />
             {/* Fallback para rotas não encontradas */}
             <Route path="*" element={<Navigate to="/dashboard" />} />
+
+            <Route path="/backups" element={<BackupPage />} />
           </Routes>
         </main>
       </div>

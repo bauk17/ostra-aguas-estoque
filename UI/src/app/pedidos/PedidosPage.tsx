@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Search, ReceiptText, Clock, CheckCircle2, 
   Calendar, Filter, ChevronLeft, ChevronRight,
-  Eye, Edit3, ShoppingCart, Loader2
+  Eye, Edit3, ShoppingCart, Loader2, X, Trash2
 } from 'lucide-react';
 import AddPedidoModal from "../../features/pedidos/components/AddPedido";
 import { formatarData } from '../../utilities/formatarData';
@@ -28,11 +28,15 @@ const PedidosPage: React.FC = () => {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // --- NOVOS ESTADOS PARA PAGINAÇÃO ---
+  // --- NOVOS ESTADOS PARA FILTRO DE DATA ---
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
+  const [mostrarPainelData, setMostrarPainelData] = useState(false);
+
+  // --- PAGINAÇÃO ---
   const [paginaAtual, setPaginaAtual] = useState(1);
   const itensPorPagina = 5;
 
-  // Carrega os pedidos ao montar a tela
   const carregarPedidos = async () => {
     setLoading(true);
     try {
@@ -49,34 +53,54 @@ const PedidosPage: React.FC = () => {
     carregarPedidos();
   }, []);
 
-  // Toda vez que o usuário mudar o filtro de status ou digitar na busca, 
-  // nós resetamos ele para a primeira página para evitar bugs visuais.
+  // Reseta a paginação caso qualquer filtro mude
   useEffect(() => {
     setPaginaAtual(1);
-  }, [activeTab, filtroTexto]);
+  }, [activeTab, filtroTexto, dataInicio, dataFim]);
 
-  // --- 1. Filtragem ---
+  // --- LÓGICA DE FILTRAGEM COMBINADA (Status + Cliente/ID + Período de Datas) ---
   const pedidosFiltrados = pedidos.filter(pedido => {
+    // 1. Filtro por Status (Abas)
+    if (activeTab !== 'Todos' && pedido.status !== activeTab) {
+      return false;
+    }
+
+    // 2. Filtro por Texto (Cliente ou ID)
     const bateTexto = 
       pedido.cliente.toLowerCase().includes(filtroTexto.toLowerCase()) ||
       pedido.id.toLowerCase().includes(filtroTexto.toLowerCase());
+    if (!bateTexto) return false;
 
-    if (activeTab === 'Todos') return bateTexto;
-    return bateTexto && pedido.status === activeTab;
+    // 3. Filtro por Período de Data (created_at esperado no formato ISO, ex: 2026-05-23...)
+    if (pedido.created_at) {
+      // Extrai apenas a parte da data 'AAAA-MM-DD' para comparar de forma justa com os inputs
+      const dataPedidoFormatada = pedido.created_at.split('T')[0];
+
+      if (dataInicio && dataPedidoFormatada < dataInicio) {
+        return false;
+      }
+      if (dataFim && dataPedidoFormatada > dataFim) {
+        return false;
+      }
+    }
+
+    return true;
   });
 
-  // --- 2. Lógica Matemática da Paginação (Corte dos Itens) ---
+  // Limpar os filtros de data facilmente
+  const limparFiltrosData = () => {
+    setDataInicio('');
+    setDataFim('');
+  };
+
+  // --- Lógica Matemática da Paginação ---
   const indiceUltimoItem = paginaAtual * itensPorPagina;
   const indicePrimeiroItem = indiceUltimoItem - itensPorPagina;
-  
-  // Esta é a lista final de apenas 5 itens que vai para a tela!
   const pedidosPaginados = pedidosFiltrados.slice(indicePrimeiroItem, indiceUltimoItem);
-
-  // Calcula o total de páginas necessário
   const totalPaginas = Math.ceil(pedidosFiltrados.length / itensPorPagina);
 
-  // --- Contadores Dinâmicos para os Cards ---
-  const totalHoje = pedidos.length;
+  // --- Contadores Dinâmicos baseados no resultado filtrado ou total ---
+  const totalGeral = pedidos.length;
   const totalPendentes = pedidos.filter(p => p.status === 'Pendente').length;
   const totalConcluidos = pedidos.filter(p => p.status === 'Entregue').length;
 
@@ -89,6 +113,20 @@ const PedidosPage: React.FC = () => {
       default: return 'bg-slate-100 text-slate-800';
     }
   };
+
+  function handleDeletarPedido(id: string): void {
+    const pedidoExistente = pedidos.find(pedido => pedido.id === id);
+    if (!pedidoExistente) {
+      console.warn(`Pedido com id ${id} não encontrado para exclusão.`);
+      return;
+    }
+
+    const confirmar = window.confirm(`Deseja realmente excluir o pedido de ${pedidoExistente.cliente}?`);
+    if (!confirmar) return;
+
+    setPedidos(prevPedidos => prevPedidos.filter(pedido => pedido.id !== id));
+    setPaginaAtual(1);
+  }
 
   return (
     <div className="p-8 w-full min-h-screen bg-[#f9f9f9] font-sans">
@@ -125,7 +163,7 @@ const PedidosPage: React.FC = () => {
       {/* Cards de Métricas */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
         {[
-          { label: 'Pedidos Cadastrados', value: loading ? '...' : totalHoje, trend: 'Total geral no banco', icon: <ReceiptText size={24}/>, bg: 'bg-white', iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },
+          { label: 'Pedidos Cadastrados', value: loading ? '...' : totalGeral, trend: 'Total geral no banco', icon: <ReceiptText size={24}/>, bg: 'bg-white', iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },
           { label: 'Pendentes', value: loading ? '...' : totalPendentes, sub: 'Aguardando entrega', icon: <Clock size={24}/>, bg: 'bg-white', iconBg: 'bg-amber-50', iconColor: 'text-amber-600' },
           { label: 'Concluidos (Entregues)', value: loading ? '...' : totalConcluidos, sub: 'Finalizados com sucesso', icon: <CheckCircle2 size={24}/>, bg: 'bg-white', iconBg: 'bg-green-50', iconColor: 'text-green-600' },
         ].map((card, i) => (
@@ -144,7 +182,7 @@ const PedidosPage: React.FC = () => {
       </div>
 
       {/* Barra de Filtros */}
-      <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-100 flex flex-col sm:flex-row gap-4 items-center justify-between mb-6">
+      <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-100 flex flex-col sm:flex-row gap-4 items-center justify-between mb-4">
         <div className="flex flex-wrap gap-2">
           {['Todos', 'Pendente', 'Entregue', 'Cancelado'].map(tag => (
             <button
@@ -163,11 +201,57 @@ const PedidosPage: React.FC = () => {
             <Calendar size={16} className="text-slate-400" />
             <span className="text-xs font-bold text-slate-600">Hoje, {new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}</span>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50">
-            <Filter size={16} /> Filtros
+          
+          <button 
+            onClick={() => setMostrarPainelData(!mostrarPainelData)}
+            className={`flex items-center gap-2 px-4 py-2 border rounded-xl text-xs font-bold transition-colors ${
+              mostrarPainelData || dataInicio || dataFim 
+                ? 'bg-blue-50 border-blue-200 text-blue-700' 
+                : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Filter size={16} /> Filtro por Data {(dataInicio || dataFim) && '•'}
           </button>
         </div>
       </div>
+
+      {/* NOVO: Painel Expansível de Filtro de Datas */}
+      {mostrarPainelData && (
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs mb-6 flex flex-wrap items-end gap-4 animate-in fade-in duration-200">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-slate-500">Data Inicial</label>
+            <input 
+              type="date" 
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-700 outline-none focus:border-[#00658d] transition-colors"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-slate-500">Data Final</label>
+            <input 
+              type="date" 
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-700 outline-none focus:border-[#00658d] transition-colors"
+            />
+          </div>
+
+          {(dataInicio || dataFim) && (
+            <button 
+              onClick={limparFiltrosData}
+              className="flex items-center gap-1.5 text-xs font-bold text-red-500 hover:text-red-700 h-fit pb-2.5 transition-colors"
+            >
+              <X size={14} /> Limpar Datas
+            </button>
+          )}
+          
+          <p className="text-[11px] text-slate-400 ml-auto pb-2.5">
+            Filtrando <strong>{pedidosFiltrados.length}</strong> de {totalGeral} registros.
+          </p>
+        </div>
+      )}
 
       {/* Tabela de Pedidos */}
       <div className="bg-white rounded-2xl shadow-xs border border-slate-100 overflow-hidden mb-8">
@@ -198,11 +282,10 @@ const PedidosPage: React.FC = () => {
               ) : pedidosPaginados.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-10 text-center text-sm font-medium text-slate-400">
-                    Nenhum pedido encontrado.
+                    Nenhum pedido encontrado para os filtros selecionados.
                   </td>
                 </tr>
               ) : (
-                // Mapeia a lista paginada de 5 itens
                 pedidosPaginados.map((pedido, index) => (
                   <tr key={pedido.id || index} className="hover:bg-blue-50/30 transition-colors group">
                     <td className="px-6 py-4">
@@ -210,7 +293,7 @@ const PedidosPage: React.FC = () => {
                         <span className="text-sm font-bold text-slate-700">{pedido.cliente}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-500 max-w-[200px] truncate">{pedido.endereco?.toUpperCase()}</td>
+                    <td className="px-6 py-4 text-sm text-slate-500 max-w-50 truncate">{pedido.endereco?.toUpperCase()}</td>
                     <td className="px-6 py-4">
                       <span className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded border border-blue-100">{pedido.produto}</span>
                     </td>
@@ -224,8 +307,10 @@ const PedidosPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="p-1.5 text-slate-300 hover:text-blue-600 transition-colors"><Eye size={18}/></button>
                         <button className="p-1.5 text-slate-300 hover:text-blue-600 transition-colors"><Edit3 size={18}/></button>
+                        <button className="p-1.5 text-slate-300 hover:text-red-600 transition-colors" onClick={() => handleDeletarPedido(pedido.id)}>
+                          <Trash2 size={18}/>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -238,11 +323,10 @@ const PedidosPage: React.FC = () => {
         {/* Footer de Paginação Dinâmica */}
         <div className="px-6 py-4 flex items-center justify-between bg-slate-50/30 border-t border-slate-100">
           <span className="text-xs font-medium text-slate-400">
-            Mostrando {indicePrimeiroItem + 1} - {Math.min(indiceUltimoItem, pedidosFiltrados.length)} de {pedidosFiltrados.length} pedidos
+            Mostrando {pedidosFiltrados.length > 0 ? indicePrimeiroItem + 1 : 0} - {Math.min(indiceUltimoItem, pedidosFiltrados.length)} de {pedidosFiltrados.length} pedidos
           </span>
           
           <div className="flex gap-1 items-center">
-            {/* Botão de Voltar */}
             <button 
               onClick={() => setPaginaAtual(prev => Math.max(prev - 1, 1))}
               disabled={paginaAtual === 1}
@@ -253,7 +337,6 @@ const PedidosPage: React.FC = () => {
               <ChevronLeft size={18}/>
             </button>
 
-            {/* Renderização Inteligente das Páginas Dinâmicas */}
             {Array.from({ length: totalPaginas }, (_, index) => {
               const numeroDaPagina = index + 1;
               return (
@@ -271,7 +354,6 @@ const PedidosPage: React.FC = () => {
               );
             })}
 
-            {/* Botão de Avançar */}
             <button 
               onClick={() => setPaginaAtual(prev => Math.min(prev + 1, totalPaginas))}
               disabled={paginaAtual === totalPaginas || totalPaginas === 0}
@@ -285,12 +367,11 @@ const PedidosPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Componente Modal Controlado */}
       <AddPedidoModal 
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={() => {
-          carregarPedidos(); // Atualiza a tabela automaticamente ao criar um novo pedido
+          carregarPedidos();
         }}
       />
 

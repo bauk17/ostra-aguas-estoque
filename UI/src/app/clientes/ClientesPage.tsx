@@ -7,11 +7,12 @@ import {
   ChevronLeft, 
   ChevronRight,
   Loader2,
+  Trash2,
   MapPin,
   Phone
 } from 'lucide-react';
 import AddClienteModal from '../../features/clientes/components/AddCustomer';
-import { listarClientes } from '../../features/clientes/repository';
+import { listarClientes, deletarCliente } from '../../features/clientes/repository';
 
 // Interface mapeada exatamente igual à estrutura do seu banco de dados
 interface Cliente {
@@ -82,6 +83,20 @@ const ClientesPage = () => {
   // Calcula a quantidade total de páginas
   const totalPaginas = Math.ceil(clientesFiltrados.length / itensPorPagina);
 
+  function handleDeletarCliente(id: string): void {
+    if (confirm("Tem certeza que deseja deletar este cliente? Esta ação não pode ser desfeita.")) {
+      deletarCliente(id)
+        .then(() => {
+          // Após deletar, recarrega a lista de clientes para refletir a mudança
+          carregarClientes();
+        })
+        .catch((error) => {
+          console.error("Erro ao deletar cliente:", error);
+          alert("Ocorreu um erro ao tentar deletar o cliente. Por favor, tente novamente.");
+        });
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#f9f9f9] p-8">
       {/* Header Area */}
@@ -140,7 +155,7 @@ const ClientesPage = () => {
                 <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contato</th>
                 <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Data de Cadastro</th>
                 <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Observações</th>
-                <th className="px-8 py-4"></th>
+                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-blue-50">
@@ -199,15 +214,15 @@ const ClientesPage = () => {
 
                     {/* Observações */}
                     <td className="px-8 py-5">
-                      <p className="text-xs text-slate-400 italic max-w-[180px] truncate">
+                      <p className="text-xs text-slate-400 italic max-w-45 truncate">
                         {cliente.observacoes || 'Sem notas'}
                       </p>
                     </td>
 
                     {/* Ações */}
                     <td className="px-8 py-5 text-right">
-                      <button className="text-slate-400 hover:text-[#00658d] transition-colors">
-                        <MoreVertical size={20} />
+                      <button className="text-slate-400 hover:text-[#e9323b] transition-colors">
+                        <Trash2 size={20} onClick={() => handleDeletarCliente(cliente.id)}/>
                       </button>
                     </td>
                   </tr>
