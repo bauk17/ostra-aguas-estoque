@@ -1,7 +1,6 @@
 import { ArrowDown, Minus, Plus, ShoppingCart, UserRoundSearch, ChevronDown, Loader2, X, Save } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { criarPedido } from '../repository';
-
 import { listarClientes } from '../../clientes/repository'; 
 
 interface Client {
@@ -20,24 +19,23 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
   const [loadingClientes, setLoadingClientes] = useState(false);
   
-  // Estados para a listagem e filtro de clientes
   const [clientes, setClientes] = useState<Client[]>([]);
   const [searchCliente, setSearchCliente] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Estado do Formulário
+  // --- ESTADO ADAPTADO PARA STRING ---
+  // Mantendo os campos numéricos como string no estado para digitação livre
   const [formData, setFormData] = useState({
-    cliente_id: '', // Agora armazenará o ID real do banco
+    cliente_id: '', 
     produto: '',
-    quantidade: 1,
-    preco_unitario: 18.50,
+    quantidade: '1',     // String para digitação fluida
+    preco_unitario: '18.50', // String para digitação fluida
     observacoes: '',
   });
 
   const [valorTotal, setValorTotal] = useState(18.50);
 
-  // Carrega os clientes do banco de dados ao abrir o modal
   useEffect(() => {
     if (open) {
       const buscarClientes = async () => {
@@ -55,7 +53,6 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
     }
   }, [open]);
 
-  // Fecha o dropdown de clientes se clicar fora do elemento
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -66,10 +63,11 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Recalcula o valor total automaticamente
+  // --- RECALCULO TRATANDO AS STRINGS ---
   useEffect(() => {
-    const total = formData.quantidade * (Number(formData.preco_unitario) || 0);
-    setValorTotal(total);
+    const qtd = parseFloat(formData.quantidade) || 0;
+    const preco = parseFloat(formData.preco_unitario.replace(',', '.')) || 0;
+    setValorTotal(qtd * preco);
   }, [formData.quantidade, formData.preco_unitario]);
 
   if (!open) return null;
@@ -80,18 +78,20 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'quantidade' || name === 'preco_unitario' ? Number(value) : value,
+      [name]: value, // Aceita qualquer caractere digitado livremente
     }));
   };
 
   const alterarQuantidade = (fator: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      quantidade: Math.max(1, prev.quantidade + fator),
-    }));
+    setFormData((prev) => {
+      const atual = parseInt(prev.quantidade, 10) || 0;
+      return {
+        ...prev,
+        quantidade: Math.max(1, atual + fator).toString(),
+      };
+    });
   };
 
-  // Filtra a lista de clientes baseando-se no que foi digitado no input
   const clientesFiltrados = clientes.filter(cliente => 
     cliente.nome.toLowerCase().includes(searchCliente.toLowerCase()) ||
     (cliente.observacoes && cliente.observacoes.includes(searchCliente))
@@ -103,15 +103,28 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
       alert("Por favor, selecione um cliente válido da lista.");
       return;
     }
+
+    const qtdFinal = parseFloat(formData.quantidade);
+    const precoFinal = parseFloat(formData.preco_unitario.replace(',', '.'));
+
+    if (isNaN(qtdFinal) || qtdFinal <= 0) {
+      alert("Por favor, insira uma quantidade válida.");
+      return;
+    }
+    if (isNaN(precoFinal) || precoFinal < 0) {
+      alert("Por favor, insira um preço unitário válido.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       await criarPedido({
         id: crypto.randomUUID(),
-        cliente_id: formData.cliente_id, // Enviando o ID real verificado por FK
+        cliente_id: formData.cliente_id, 
         produto: formData.produto,
-        quantidade: formData.quantidade,
-        preco_unitario: formData.preco_unitario,
+        quantidade: qtdFinal,
+        preco_unitario: precoFinal,
         valor_total: valorTotal,
         status: 'Pendente',
         created_at: new Date(),
@@ -119,8 +132,7 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
 
       if (onSuccess) onSuccess();
 
-      // Reseta os estados e fecha o modal
-      setFormData({ cliente_id: '', produto: '', quantidade: 1, preco_unitario: 18.50, observacoes: '' });
+      setFormData({ cliente_id: '', produto: '', quantidade: '1', preco_unitario: '18.50', observacoes: '' });
       setSearchCliente('');
       onClose();
       alert('Pedido registrado com sucesso!');
@@ -136,16 +148,13 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#001e40]/40 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="absolute inset-0" onClick={onClose} />
 
-      {/* Modal Container */}
       <div className="relative bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
         
         {/* Header */}
         <div className="px-8 py-5 bg-slate-50 flex justify-between items-center border-b border-slate-100">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#00658d]">
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-                <ShoppingCart />
-              </span>
+              <ShoppingCart size={20} />
             </div>
             <div>
               <h3 className="font-bold text-lg text-[#001e40]">Novo Pedido</h3>
@@ -159,30 +168,25 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
             onClick={onClose}
             className="p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors"
           >
-            <span className="material-symbols-outlined"><X /></span>
+            <X size={20} />
           </button>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
           
-          {/* Cliente Autocomplete/Dropdown */}
+          {/* Cliente Dropdown */}
           <div className="space-y-1 relative" ref={dropdownRef}>
             <label className="text-xs font-bold text-[#001e40] ml-1">Cliente</label>
             <div className="relative group">
               <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-[#00658d]">
-                {loadingClientes ? (
-                  <Loader2 className="animate-spin" size={18} />
-                ) : (
-                  <UserRoundSearch size={18} />
-                )}
+                {loadingClientes ? <Loader2 className="animate-spin" size={18} /> : <UserRoundSearch size={18} />}
               </span>
               <input
                 value={searchCliente}
                 onChange={(e) => {
                   setSearchCliente(e.target.value);
                   setIsDropdownOpen(true);
-                  // Se o usuário apagar o texto, removemos o ID selecionado
                   if (e.target.value === '') {
                     setFormData(prev => ({ ...prev, cliente_id: '' }));
                   }
@@ -198,13 +202,10 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
               </span>
             </div>
 
-            {/* Dropdown de Clientes Filtrados */}
             {isDropdownOpen && (
               <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto divide-y divide-slate-100">
                 {clientesFiltrados.length === 0 ? (
-                  <div className="p-4 text-sm text-slate-400 text-center">
-                    Nenhum cliente cadastrado com esse nome
-                  </div>
+                  <div className="p-4 text-sm text-slate-400 text-center">Nenhum cliente cadastrado</div>
                 ) : (
                   clientesFiltrados.map((cliente) => (
                     <button
@@ -218,9 +219,7 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
                       className="w-full text-left px-4 py-3 hover:bg-blue-50/50 transition-colors flex justify-between items-center text-sm font-semibold text-slate-700"
                     >
                       <span>{cliente.nome}</span>
-                      {cliente.observacoes && (
-                        <span className="text-xs text-slate-400 font-normal">{cliente.observacoes}</span>
-                      )}
+                      {cliente.observacoes && <span className="text-xs text-slate-400 font-normal">{cliente.observacoes}</span>}
                     </button>
                   ))
                 )}
@@ -228,7 +227,7 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
             )}
           </div>
 
-          {/* Produto e Quantidade */}
+          {/* Produto e Quantidade Livre */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1">
               <label className="text-xs font-bold text-[#001e40] ml-1">Produto</label>
@@ -259,13 +258,13 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
                 >
                   <Minus size={16} />
                 </button>
+                {/* Mudado para text e mapeado diretamente ao estado sem travas */}
                 <input
                   name="quantidade"
-                  type="number"
-                  min="1"
+                  type="text"
                   value={formData.quantidade}
                   onChange={handleInputChange}
-                  className="w-full text-center bg-transparent border-none focus:ring-0 text-sm font-bold text-slate-800 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-full text-center bg-transparent border-none focus:ring-0 text-sm font-bold text-slate-800"
                 />
                 <button 
                   type="button" 
@@ -278,16 +277,16 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
             </div>
           </div>
 
-          {/* Preço Unitário e Valor Total */}
+          {/* Preço Unitário Livre e Valor Total */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
             <div className="space-y-1">
               <label className="text-xs font-bold text-[#001e40] ml-1">Preço Unitário</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400 font-bold text-sm">R$</span>
+                {/* Tipo alterado para text para permitir digitação fluida e o uso de ponto/vírgula livremente */}
                 <input
                   name="preco_unitario"
-                  type="number"
-                  step="0.01"
+                  type="text"
                   required
                   value={formData.preco_unitario}
                   onChange={handleInputChange}
