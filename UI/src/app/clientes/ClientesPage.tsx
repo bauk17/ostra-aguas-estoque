@@ -3,7 +3,6 @@ import {
   Search, 
   UserPlus, 
   Users, 
-  MoreVertical, 
   ChevronLeft, 
   ChevronRight,
   Loader2,

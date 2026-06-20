@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Search, ReceiptText, Clock, CheckCircle2, 
   Calendar, Filter, ChevronLeft, ChevronRight,
-  Eye, Edit3, ShoppingCart, Loader2, X, Trash2
+   Edit3, ShoppingCart, Loader2, X, Trash2
 } from 'lucide-react';
 import AddPedidoModal from "../../features/pedidos/components/AddPedido";
 import { formatarData } from '../../utilities/formatarData';

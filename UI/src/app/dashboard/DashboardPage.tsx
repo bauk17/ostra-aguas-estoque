@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Sidebar } from "../../components/layout/Sidebar";
-import { Loader2, CircleDollarSign, TrendingUp, CalendarArrowUp, UserRound, Pencil, ArrowRight } from 'lucide-react';
+import { Loader2, CircleDollarSign, TrendingUp, CalendarArrowUp, UserRound, ArrowRight } from 'lucide-react';
 import { listarPedidos } from '../../features/pedidos/repository';
 
 interface PedidoRecente {
