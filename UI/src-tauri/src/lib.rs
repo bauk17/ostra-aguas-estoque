@@ -1,8 +1,6 @@
 use tauri_plugin_sql::Builder as SqlBuilder;
 use std::fs;
-use chrono::Local;
 use tauri::Manager;
-
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -128,12 +126,29 @@ fn restaurar_backup(app: tauri::AppHandle, backup_path: &str) -> Result<String, 
     let banco = app_dir.join("estoque.db");
     let backup = std::path::Path::new(backup_path);
 
+    println!("Restaurando backup: {:?}", backup);
+    println!("Banco destino: {:?}", banco);
+
     if !backup.exists() {
         return Err("Backup file does not exist".to_string());
     }
 
-    fs::copy(backup, banco)
+    fs::copy(&backup, &banco)
         .map_err(|e| format!("Failed to restore backup: {}", e))?;
+
+    println!(
+    "Tamanho backup: {} bytes",
+    fs::metadata(&backup)
+        .map_err(|e| e.to_string())?
+        .len()
+    );
+
+    println!(
+        "Tamanho banco: {} bytes",
+        fs::metadata(&banco)
+            .map_err(|e| e.to_string())?
+            .len()
+    );
 
     Ok("Backup restored successfully".to_string())
 }
@@ -223,13 +238,24 @@ fn excluir_backup(
     Ok(())
 }
 
+#[tauri::command]
+fn exportar_backup(
+    backup_path: String,
+    destino: String,
+) -> Result<(), String> {
+    std::fs::copy(&backup_path, &destino)
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(SqlBuilder::default().build())
-        .invoke_handler(tauri::generate_handler![greet, criar_backup, listar_backups, restaurar_backup, verificar_backup_diario, excluir_backup])
+        .plugin(tauri_plugin_dialog::init())
+        .invoke_handler(tauri::generate_handler![greet, criar_backup, listar_backups, restaurar_backup, verificar_backup_diario, excluir_backup, exportar_backup])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

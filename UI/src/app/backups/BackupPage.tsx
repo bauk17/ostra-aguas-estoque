@@ -6,7 +6,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Trash2,
+  RotateCcw,
+  Share
 } from "lucide-react";
+
+import { save } from "@tauri-apps/plugin-dialog";
 
 const ITENS_POR_PAGINA = 5;
 
@@ -88,6 +92,55 @@ export default function BackupsPage() {
       2
     )} GB`;
   }
+
+  async function restaurarBackup(nome: string) {
+  const confirmar = confirm(
+    `Deseja restaurar o backup "${nome}"?\n\nO banco atual será substituído.`
+  );
+
+  if (!confirmar) return;
+
+  try {
+    await invoke("restaurar_backup", {
+      backupPath: `/home/caua/.config/com.caua.estoque/backups/${nome}`,
+    });
+
+    
+
+    alert(
+      "Backup restaurado com sucesso!\nReinicie o sistema."
+    );
+  } catch (error) {
+    console.error(error);
+    alert("Erro ao restaurar backup");
+  }
+}
+
+async function exportarBackup(nomeArquivo: string) {
+  try {
+    const destino = await save({
+      defaultPath: nomeArquivo,
+      filters: [
+        {
+          name: "Banco SQLite",
+          extensions: ["db"],
+        },
+      ],
+    });
+
+    if (!destino) return;
+
+    await invoke("exportar_backup", {
+      backupPath: `/home/caua/.config/com.caua.estoque/backups/${nomeArquivo}`,
+      destino,
+    });
+
+    alert("Backup exportado com sucesso!");
+  } catch (error) {
+    console.error(error);
+    alert("Erro ao exportar backup");
+  }
+}
 
   useEffect(() => {
     carregarBackups();
@@ -224,12 +277,49 @@ export default function BackupsPage() {
                     )}
                   </td>
                   <td className="px-6 py-4">
-                    <button
-                      onClick={() => excluirBackup(backup.nome)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() =>
+                          restaurarBackup(backup.nome)
+                        }
+                        className="
+                          flex items-center gap-2
+                          px-3 py-2
+                          rounded-lg
+                          bg-blue-50
+                          hover:bg-blue-100
+                          text-blue-600
+                          transition-all
+                        "
+                      >
+                        <RotateCcw size={16} />
+                        Restaurar
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          excluirBackup(backup.nome)
+                        }
+                        className="
+                          flex items-center gap-2
+                          px-3 py-2
+                          rounded-lg
+                          bg-red-50
+                          hover:bg-red-100
+                          text-red-600
+                          transition-all
+                        "
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                        <button
+                          onClick={() => exportarBackup(backup.nome)}
+                          className="px-3 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700"
+                        >
+                          <Share size={16} />
+                        </button>
+
+                    </div>
                   </td>
                 </tr>
               ))

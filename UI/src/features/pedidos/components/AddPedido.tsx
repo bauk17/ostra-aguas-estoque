@@ -241,10 +241,7 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
                   className="w-full pl-4 pr-10 py-3.5 bg-slate-50 border border-slate-200 rounded-xl appearance-none focus:ring-4 focus:ring-blue-100 focus:border-[#00658d] transition-all outline-none text-sm font-semibold text-slate-800"
                 >
                   <option value="" disabled>Selecione um item</option>
-                  <option value="Galão 20L - Água Mineral Ostra">Galão 20L - Água Mineral Ostra</option>
-                  <option value="Pack 12x 500ml - Água Mineral Ostra">Pack 12x 500ml - Água Mineral Ostra</option>
-                  <option value="Copo 200ml (Caixa 48 un)">Copo 200ml (Caixa 48 un)</option>
-                  <option value="Galão 10L - Água Mineral Ostra">Galão 10L - Água Mineral Ostra</option>
+                  <option value="Galão 20L - Água Mineral Ostra">Galão 20L - Água Mineral Vale do Sol</option>
                 </select>
                 <span className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
                   <ArrowDown size={18} />

@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ostra-estoque",
+  "productName": "Ostra Aguas Estoque",
   "version": "0.1.0",
   "identifier": "com.caua.estoque",
   "build": {
@@ -17,8 +17,8 @@
   "app": {
     "windows": [
       {
-        "title": "ostra-estoque",
-        "width": 800,
+        "title": "Ostra Aguas Estoque",
+        "width": 1024,
         "height": 600
       }
     ],
