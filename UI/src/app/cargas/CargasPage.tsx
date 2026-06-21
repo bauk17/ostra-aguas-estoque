@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   PlusSquare,
   Droplets,
@@ -7,22 +7,19 @@ import {
   Edit3,
   Trash2,
   TrendingUp,
-  X,
-  Package,
   Calendar,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
 
-import { criarCargaService } from '../../features/estoque/services/criarCargaService';
 import { listarCargasService } from '../../features/estoque/services/listarCargaService';
 import { deletarCarga } from '../../features/estoque/repository';
 import type { Carga } from '../../features/estoque/types';
+import AddCargaModal from '../../features/estoque/components/AddCarga';
 
 export default function CargasPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [cargas, setCargas] = useState<Carga[]>([]);
 
   // Estados para filtro de data
@@ -38,15 +35,6 @@ export default function CargasPage() {
   // --- ESTADOS PARA PAGINAÇÃO ---
   const [paginaAtual, setPaginaAtual] = useState(1);
   const itensPorPagina = 6;
-
-  const [formData, setFormData] = useState({
-    produto: 'Galão 20L',
-    quantidade: '',
-    custo_unitario: '',
-    preco_venda: '',
-    quebras: '',
-    retornaveis: '',
-  });
 
   const fetchCargas = async () => {
     try {
@@ -69,15 +57,9 @@ export default function CargasPage() {
     const idString = String(id);
 
     try {
-      // Exemplo fictício de chamada. Substitua pela sua função real do Tauri/Rust:
       await deletarCarga(idString);
-      
-      console.log(`Enviando ID para deletarCarga: ${idString}`);
-      
-      // Atualiza a lista local chamando a busca do banco novamente
       await fetchCargas();
       
-      // Ajuste de segurança para paginação caso delete o único item de uma página avançada
       if (cargasPaginadas.length === 1 && paginaAtual > 1) {
         setPaginaAtual(prev => prev - 1);
       }
@@ -106,49 +88,7 @@ export default function CargasPage() {
     setPaginaAtual(1);
   }, [dataInicio, dataFim]);
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await criarCargaService({
-        produto: formData.produto,
-        quantidade: Number(formData.quantidade),
-        custo_unitario: Number(formData.custo_unitario),
-        preco_venda: Number(formData.preco_venda),
-        quebras: Number(formData.quebras),
-        retornaveis: Number(formData.retornaveis),
-      });
-      await fetchCargas();
-      setFormData({
-        produto: 'Galão 20L',
-        quantidade: '',
-        custo_unitario: '',
-        preco_venda: '',
-        quebras: '',
-        retornaveis: '',
-      });
-      setIsModalOpen(false);
-    } catch (error) {
-      console.error(error);
-      if (error instanceof Error) {
-        alert(error.message);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // --- LÓGICA DE FILTRAGEM CORRIGIDA (SEM ERRO DE FUSO HORÁRIO) ---
+  // --- LÓGICA DE FILTRAGEM ---
   const cargasFiltradas = cargas.filter((carga) => {
     if (!carga.created_at) return true;
 
@@ -269,11 +209,9 @@ export default function CargasPage() {
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Ações</th>
               </tr>
             </thead>
-
             <tbody className="divide-y divide-slate-100">
               {cargasPaginadas.length > 0 ? (
                 cargasPaginadas.map((carga) => (
-                  // Passando a nova função handleDeletarCarga via props
                   <ProductRow key={carga.id} carga={carga} onDeletar={handleDeletarCarga} />
                 ))
               ) : (
@@ -326,64 +264,16 @@ export default function CargasPage() {
         </div>
       </div>
 
-      {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-          <form onSubmit={handleSubmit} className="relative bg-white w-full max-w-4xl max-h-[92vh] rounded-4xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center px-8 py-6 border-b border-slate-100 bg-slate-50/50">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-[#00658d] text-white flex items-center justify-center shadow-lg">
-                  <Package size={26} />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-[#001e40]">Registrar Nova Carga</h2>
-                  <p className="text-xs text-slate-400 uppercase font-black tracking-wider">Entrada de estoque</p>
-                </div>
-              </div>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-red-500 transition-all">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="p-8 space-y-6 overflow-y-auto max-h-[70vh]">
-              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                <h3 className="font-bold text-[#001e40] mb-4">1. Seleção de Produto</h3>
-                <select name="produto" value={formData.produto} onChange={handleInputChange} className="w-full border border-slate-200 bg-white rounded-xl p-3 outline-none focus:ring-4 focus:ring-blue-100">
-                  <option value="Galão 20L Premium">Galão 20L</option>
-                  <option value="Água Mineral 500ml">Água Mineral 500ml</option>
-                </select>
-              </div>
-
-              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                <h3 className="font-bold text-[#001e40] mb-4">2. Detalhes do Estoque</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <input type="number" name="quantidade" value={formData.quantidade} onChange={handleInputChange} placeholder="Quantidade" className="border border-slate-200 rounded-xl p-3 outline-none focus:ring-4 focus:ring-blue-100" required />
-                  <input type="number" step="0.01" name="custo_unitario" value={formData.custo_unitario} onChange={handleInputChange} placeholder="Preço de Custo (R$)" className="border border-slate-200 rounded-xl p-3 outline-none focus:ring-4 focus:ring-blue-100" required />
-                  <input type="number" step="0.01" name="preco_venda" value={formData.preco_venda} onChange={handleInputChange} placeholder="Preço de Venda (R$)" className="border border-emerald-200 bg-emerald-50 rounded-xl p-3 outline-none focus:ring-4 focus:ring-emerald-100" required />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                  <h3 className="font-bold text-[#001e40] mb-4">3. Quebras e Perdas</h3>
-                  <input type="number" name="quebras" value={formData.quebras} onChange={handleInputChange} placeholder="Quantidade" className="border border-slate-200 rounded-xl p-3 w-full outline-none focus:ring-4 focus:ring-red-100" />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-4 px-8 py-6 border-t border-slate-100 bg-slate-50/70">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 rounded-xl bg-slate-200 hover:bg-slate-300 font-semibold transition-all">Cancelar</button>
-              <button type="submit" disabled={loading} className="px-6 py-3 rounded-xl bg-[#00658d] hover:bg-[#005577] text-white font-semibold shadow-lg transition-all disabled:opacity-50">{loading ? 'Salvando...' : 'Confirmar Entrada'}</button>
-            </div>
-          </form>
-        </div>
-      )}
+      {/* Modal - Passando apenas controle visual e o trigger de sucesso */}
+      <AddCargaModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={fetchCargas}
+      />
     </div>
   );
 }
 
-// --- COMPONENTE FILHO ATUALIZADO (PROPS DO TIPO INTERFACE) ---
 interface ProductRowProps {
   carga: Carga;
   onDeletar: (id: string | number) => void;
@@ -403,20 +293,11 @@ function ProductRow({ carga, onDeletar }: ProductRowProps) {
       <td className="px-6 py-4 text-slate-400">{dataFormatada}</td>
       <td className="px-6 py-4 text-right">
         <div className="flex justify-end gap-1.5">
-          {/* Botão de Editar */}
           <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors">
             <Edit3 size={18} />
           </button>
-          
-          {/* NOVO: Botão de Deletar */}
           <button 
-            onClick={() => {
-              if (carga.id !== undefined) {
-                onDeletar(carga.id);
-              } else {
-                alert("Esta carga não possui um ID válido no banco de dados.");
-              }
-            }}
+            onClick={() => carga.id !== undefined ? onDeletar(carga.id) : alert("ID inválido.")}
             className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors"
             title="Excluir carga"
           >
