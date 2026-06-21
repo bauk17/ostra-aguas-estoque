@@ -19,7 +19,8 @@
       {
         "title": "Ostra Aguas Estoque",
         "width": 1024,
-        "height": 600
+        "height": 600,
+        "devtools": true
       }
     ],
     "security": {

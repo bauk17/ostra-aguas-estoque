@@ -77,18 +77,20 @@ export default function AddCargaModal({ open, onClose, onSuccess, statusMsg }: P
         retornaveis: '',
       });
       onClose();
-    } catch (error) {
-      console.error("Falha na operação de banco de dados (Cargas):", error);
-      
-      // 👈 Captura a mensagem real da falha (ex: erro de constraint, SQLite travado, falha de conexão)
-      if (error instanceof Error) {
-        setErroMsg(`Erro ao salvar no banco: ${error.message}`);
-      } else {
-        setErroMsg("Erro desconhecido ao tentar persistir os dados da carga.");
+    }  catch (error) {
+        console.error("Falha na operação de banco de dados (Cargas):", error);
+        
+        // 👈 Tratamento estrito para extrair texto de qualquer tipo de retorno do backend
+        if (error instanceof Error) {
+          setErroMsg(`Erro (Error Instance): ${error.message}`);
+        } else if (typeof error === 'string') {
+          setErroMsg(`Erro (Backend String): ${error}`);
+        } else if (typeof error === 'object' && error !== null) {
+          setErroMsg(`Erro (Backend Object): ${JSON.stringify(error)}`);
+        } else {
+          setErroMsg("Erro totalmente desconhecido ao persistir dados.");
+        }
       }
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
