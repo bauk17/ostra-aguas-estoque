@@ -8,15 +8,15 @@ export async function criarCarga(data: Carga) {
 
   try {
     await db.execute(
-      `INSERT INTO cargas (...) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO cargas (id, produto, quantidade, custo_unitario, preco_venda, quebras, lucro_esperado, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.id,
         data.produto,
         data.quantidade,
         data.custo_unitario,
         data.preco_venda ?? null,
-        data.lucro_esperado ?? null,
         data.quebras ?? 0,
+        data.lucro_esperado ?? null,
         new Date().toISOString(),
       ]
     );

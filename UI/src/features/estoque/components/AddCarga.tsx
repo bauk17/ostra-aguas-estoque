@@ -6,6 +6,7 @@ interface Props {
   onClose: () => void;
   onSubmit: (e: React.FormEvent) => void;
   loading: boolean;
+  statusMsg?: string; // 👈 ADICIONADO
   formData: {
     produto: string;
     quantidade: number;
@@ -25,12 +26,13 @@ export default function AddCargaModal({
   loading,
   formData,
   handleInputChange,
+  statusMsg, // 👈 ADICIONADO
 }: Props) {
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      
+
       {/* Overlay */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -40,9 +42,9 @@ export default function AddCargaModal({
       {/* Modal */}
       <form
         onSubmit={onSubmit}
-        className="relative bg-white w-[800px] max-h-[90vh] rounded-2xl shadow-xl overflow-hidden"
+        className="relative bg-white w-200 max-h-[90vh] rounded-2xl shadow-xl overflow-hidden"
       >
-        
+
         {/* Header */}
         <div className="flex justify-between items-center px-6 py-5 border-b border-slate-100">
           <div>
@@ -64,8 +66,15 @@ export default function AddCargaModal({
           </button>
         </div>
 
-        {/* Body */}
+        {/* BODY */}
         <div className="p-6 overflow-y-auto max-h-[70vh]">
+
+          {/* 🔥 LOG VISUAL ADICIONADO */}
+          {statusMsg && (
+            <div className="mb-4 p-3 rounded-lg bg-blue-50 text-blue-700 text-sm border border-blue-100">
+              {statusMsg}
+            </div>
+          )}
 
           {/* Produto */}
           <div className="bg-slate-50 p-5 rounded-2xl mb-5 border border-slate-100">
@@ -163,7 +172,7 @@ export default function AddCargaModal({
 
         {/* Footer */}
         <div className="flex justify-end gap-3 px-6 py-5 border-t border-slate-100 bg-slate-50">
-          
+
           <button
             type="button"
             onClick={onClose}
