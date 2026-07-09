@@ -81,3 +81,37 @@ export const deletarPedido = async (id: string) => {
         [id]
     );
 }
+
+export const atualizarPedido = async (
+    id: string, 
+    data: {
+        cliente_id: string;
+        produto: string;
+        quantidade: number;
+        preco_unitario: number;
+        valor_total: number;
+        status: string;
+    }
+) => {
+    const db = await getDb();
+
+    await db.execute(
+        `UPDATE pedidos 
+         SET cliente_id = ?, 
+             produto = ?, 
+             quantidade = ?, 
+             preco_unitario = ?, 
+             valor_total = ?, 
+             status = ?
+         WHERE id = ?`,
+        [
+            data.cliente_id,
+            data.produto,
+            data.quantidade,
+            data.preco_unitario,
+            data.valor_total,
+            data.status,
+            id
+        ]
+    );
+};

@@ -1,6 +1,6 @@
 import { ArrowDown, Minus, Plus, ShoppingCart, UserRoundSearch, ChevronDown, Loader2, X, Save } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
-import { criarPedido } from '../repository';
+import { atualizarPedido } from '../repository'; 
 import { listarClientes } from '../../clientes/repository'; 
 
 interface Client {
@@ -9,13 +9,26 @@ interface Client {
   observacoes?: string;
 }
 
+interface Pedido {
+  id: string;
+  cliente_id?: string; // Mapeado para associar com o seletor
+  cliente: string;
+  produto: string;
+  quantidade: number;
+  valor_total: string | number;
+  preco_unitario?: string | number;
+  observacoes?: string;
+  status: 'Em Rota' | 'Pendente' | 'Entregue' | 'Cancelado';
+}
+
 interface Props {
   open: boolean;
+  pedido: Pedido | null; // Recebe o pedido selecionado para edição
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
+export default function EditPedidoModal({ open, pedido, onClose, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
   const [loadingClientes, setLoadingClientes] = useState(false);
   
@@ -31,11 +44,12 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
     quantidade: '1',     
     preco_unitario: '18.50', 
     observacoes: '',
-    status: 'Pendente', // Novo campo adicionado ao estado
+    status: 'Pendente',
   });
 
   const [valorTotal, setValorTotal] = useState(18.50);
 
+  // Carrega a lista de clientes do banco
   useEffect(() => {
     if (open) {
       const buscarClientes = async () => {
@@ -43,6 +57,17 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
         try {
           const dados = await listarClientes();
           setClientes(dados);
+          
+          // Se o pedido já veio com cliente_id, tenta sincronizar o texto da busca
+          if (pedido) {
+            const clienteEncontrado = dados.find((c: Client) => c.id === pedido.cliente_id || c.nome === pedido.cliente);
+            if (clienteEncontrado) {
+              setSearchCliente(clienteEncontrado.nome);
+              setFormData(prev => ({ ...prev, cliente_id: clienteEncontrado.id }));
+            } else {
+              setSearchCliente(pedido.cliente);
+            }
+          }
         } catch (error) {
           console.error("Erro ao carregar clientes para o seletor:", error);
         } finally {
@@ -51,8 +76,28 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
       };
       buscarClientes();
     }
-  }, [open]);
+  }, [open, pedido]);
 
+  // Popula os dados do pedido no formulário quando o modal abre
+  useEffect(() => {
+    if (open && pedido) {
+      // Tratando caso o preço unitário não venha direto do objeto (calcula por aproximação se necessário)
+      const precoUnit = pedido.preco_unitario 
+        ? pedido.preco_unitario.toString() 
+        : (parseFloat(pedido.valor_total.toString().replace(/[^\d,.]/g, '')) / pedido.quantidade).toFixed(2);
+
+      setFormData({
+        cliente_id: pedido.cliente_id || '',
+        produto: pedido.produto,
+        quantidade: pedido.quantidade.toString(),
+        preco_unitario: precoUnit.replace('.', ','),
+        observacoes: pedido.observacoes || '',
+        status: pedido.status,
+      });
+    }
+  }, [open, pedido]);
+
+  // Fecha o dropdown ao clicar fora
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -63,23 +108,20 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // --- RECALCULO TRATANDO AS STRINGS ---
+  // --- RECALCULO DO VALOR TOTAL ---
   useEffect(() => {
     const qtd = parseFloat(formData.quantidade) || 0;
     const preco = parseFloat(formData.preco_unitario.replace(',', '.')) || 0;
     setValorTotal(qtd * preco);
   }, [formData.quantidade, formData.preco_unitario]);
 
-  if (!open) return null;
+  if (!open || !pedido) return null;
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const alterarQuantidade = (fator: number) => {
@@ -119,33 +161,22 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
     setLoading(true);
 
     try {
-      await criarPedido({
-        id: crypto.randomUUID(),
+      // Executa a atualização passando o ID original do pedido
+      await atualizarPedido(pedido.id, {
         cliente_id: formData.cliente_id, 
         produto: formData.produto,
         quantidade: qtdFinal,
         preco_unitario: precoFinal,
         valor_total: valorTotal,
-        status: formData.status, // Agora utiliza o valor selecionado dinamicamente
-        created_at: new Date(),
+        status: formData.status,
       });
 
       if (onSuccess) onSuccess();
-
-      setFormData({ 
-        cliente_id: '', 
-        produto: '', 
-        quantidade: '1', 
-        preco_unitario: '18.50', 
-        observacoes: '', 
-        status: 'Pendente' 
-      });
-      setSearchCliente('');
       onClose();
-      alert('Pedido registrado com sucesso!');
+      alert('Pedido atualizado com sucesso!');
     } catch (error) {
-      console.error('Erro ao salvar pedido:', error);
-      alert('Erro ao salvar pedido no banco de dados.');
+      console.error('Erro ao atualizar pedido:', error);
+      alert('Erro ao atualizar o pedido no banco de dados.');
     } finally {
       setLoading(false);
     }
@@ -164,9 +195,9 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
               <ShoppingCart size={20} />
             </div>
             <div>
-              <h3 className="font-bold text-lg text-[#001e40]">Novo Pedido</h3>
+              <h3 className="font-bold text-lg text-[#001e40]">Editar Pedido</h3>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                Cadastro de Venda Direta
+                Alteração de Registro Interno
               </p>
             </div>
           </div>
@@ -201,7 +232,7 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
                 onFocus={() => setIsDropdownOpen(true)}
                 required
                 className="w-full pl-12 pr-10 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-[#00658d] transition-all outline-none text-sm font-semibold text-slate-800"
-                placeholder="Digite o nome, CPF ou CNPJ do cliente..."
+                placeholder="Digite o nome do cliente..."
                 type="text"
               />
               <span className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
@@ -212,7 +243,7 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
             {isDropdownOpen && (
               <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto divide-y divide-slate-100">
                 {clientesFiltrados.length === 0 ? (
-                  <div className="p-4 text-sm text-slate-400 text-center">Nenhum cliente cadastrado</div>
+                  <div className="p-4 text-sm text-slate-400 text-center">Nenhum cliente encontrado</div>
                 ) : (
                   clientesFiltrados.map((cliente) => (
                     <button
@@ -234,7 +265,7 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
             )}
           </div>
 
-          {/* Produto e Quantidade Livre */}
+          {/* Produto e Quantidade */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1">
               <label className="text-xs font-bold text-[#001e40] ml-1">Produto</label>
@@ -283,7 +314,7 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
             </div>
           </div>
 
-          {/* Preço Unitário Livre e Valor Total */}
+          {/* Preço Unitário e Valor Total */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
             <div className="space-y-1">
               <label className="text-xs font-bold text-[#001e40] ml-1">Preço Unitário</label>
@@ -324,7 +355,7 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
             />
           </div>
 
-          {/* Seleção do Status do Pedido */}
+          {/* Status do Pedido */}
           <div className="space-y-1">
             <label className="text-xs font-bold text-[#001e40] ml-1">Status do Pedido</label>
             <div className="relative">
@@ -336,7 +367,9 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
                 className="w-full pl-4 pr-10 py-3.5 bg-slate-50 border border-slate-200 rounded-xl appearance-none focus:ring-4 focus:ring-blue-100 focus:border-[#00658d] transition-all outline-none text-sm font-semibold text-slate-800"
               >
                 <option value="Pendente">Pendente</option>
+                <option value="Em Rota">Em Rota</option>
                 <option value="Entregue">Entregue</option>
+                <option value="Cancelado">Cancelado</option>
               </select>
               <span className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
                 <ChevronDown size={18} />
@@ -359,7 +392,7 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
               className="bg-[#001e40] text-white px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider flex items-center gap-2 shadow-lg hover:scale-[0.98] active:scale-95 transition-all disabled:opacity-50"
             >
               <Save className="text-lg" />
-              {loading ? 'Salvando...' : 'Salvar Pedido'}
+              {loading ? 'Salvando...' : 'Salvar Alterações'}
             </button>
           </div>
 

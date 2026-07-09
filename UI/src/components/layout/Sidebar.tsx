@@ -22,10 +22,7 @@ export const Sidebar = () => {
       
       <div className="border-t border-slate-200 pt-4">
         
-        <button className="w-[calc(100%-16px)] mx-2 p-3 flex items-center gap-3 rounded-lg text-red-500 hover:bg-red-50 transition-all">
-          <LogOut size={20} />
-          <span className="font-medium">Sign Out</span>
-        </button>
+        
       </div>
     </aside>
   );

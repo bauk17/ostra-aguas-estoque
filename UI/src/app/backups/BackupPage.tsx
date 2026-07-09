@@ -7,11 +7,13 @@ import {
   ChevronRight,
   Trash2,
   RotateCcw,
-  Share
+  Share,
+  Upload
 } from "lucide-react";
 
 import { save } from "@tauri-apps/plugin-dialog";
-
+import { open } from "@tauri-apps/plugin-dialog";
+import { appConfigDir, join } from "@tauri-apps/api/path"; 
 const ITENS_POR_PAGINA = 5;
 
 interface BackupInfo {
@@ -27,10 +29,9 @@ export default function BackupsPage() {
 
   async function carregarBackups() {
     try {
-      const resultado = await invoke<BackupInfo[]>(
-        "listar_backups"
-      );
-
+      const resultado = await invoke<BackupInfo[]>("listar_backups");
+      const caminho = await invoke<string>("caminho_banco");
+      console.log(caminho);
       setBackups(resultado);
     } catch (error) {
       console.error(error);
@@ -41,11 +42,9 @@ export default function BackupsPage() {
   async function criarNovoBackup() {
     try {
       setLoading(true);
-
       await invoke("criar_backup");
-
+      
       await carregarBackups();
-
       alert("Backup criado com sucesso!");
     } catch (error) {
       console.error(error);
@@ -55,109 +54,120 @@ export default function BackupsPage() {
     }
   }
 
+  async function importarBackup() {
+    try {
+      setLoading(true);
+      
+      const arquivo = await open({
+        multiple: false,
+        directory: false,
+        filters: [
+          {
+            name: "Banco de Dados SQLite",
+            extensions: ["db"],
+          },
+        ],
+      });
+          
+        
+      if (!arquivo) return;
+
+      await invoke("importar_backup", {
+        backupPath: arquivo,
+      })
+
+      await carregarBackups();
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao importar backup");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function excluirBackup(nome: string) {
-  const confirmar = confirm(
-    `Deseja realmente excluir o backup "${nome}"?`
-  );
+    const confirmar = confirm(`Deseja realmente excluir o backup "${nome}"?`);
+    if (!confirmar) return;
 
-  if (!confirmar) return;
-
-  try {
-    await invoke("excluir_backup", {
-      nomeArquivo: nome,
-    });
-
-    await carregarBackups();
-  } catch (error) {
-    console.error(error);
-    alert("Erro ao excluir backup");
-  }
- }   
+    try {
+      await invoke("excluir_backup", {
+        nomeArquivo: nome,
+      });
+      await carregarBackups();
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao excluir backup");
+    }
+  }   
 
   function formatarTamanho(bytes: number) {
-    if (bytes < 1024) {
-      return `${bytes} B`;
-    }
-
-    if (bytes < 1024 * 1024) {
-      return `${(bytes / 1024).toFixed(2)} KB`;
-    }
-
-    if (bytes < 1024 * 1024 * 1024) {
-      return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-    }
-
-    return `${(bytes / 1024 / 1024 / 1024).toFixed(
-      2
-    )} GB`;
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+    return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
   }
 
   async function restaurarBackup(nome: string) {
-  const confirmar = confirm(
-    `Deseja restaurar o backup "${nome}"?\n\nO banco atual será substituído.`
-  );
-
-  if (!confirmar) return;
-
-  try {
-    await invoke("restaurar_backup", {
-      backupPath: `/home/caua/.config/com.caua.estoque/backups/${nome}`,
-    });
-
-    
-
-    alert(
-      "Backup restaurado com sucesso!\nReinicie o sistema."
+    const confirmar = confirm(
+      `Deseja restaurar o backup "${nome}"?\n\nO banco atual será substituído.`
     );
-  } catch (error) {
-    console.error(error);
-    alert("Erro ao restaurar backup");
+    if (!confirmar) return;
+
+    try {
+      // Resolve dinamicamente: C:\Users\Nome\AppData\Roaming\sua.app\backups\nome ou ~/.config/sua.app/backups/nome
+      const configDir = await appConfigDir();
+      const caminhoCompletoBackup = await join(configDir, "backups", nome);
+
+      await invoke("restaurar_backup", {
+        backupPath: caminhoCompletoBackup, // 👈 Envia o caminho nativo correto do SO atual
+      });
+
+      alert("Backup restaurado com sucesso!\nReinicie o sistema.");
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao restaurar backup");
+    }
   }
-}
 
-async function exportarBackup(nomeArquivo: string) {
-  try {
-    const destino = await save({
-      defaultPath: nomeArquivo,
-      filters: [
-        {
-          name: "Banco SQLite",
-          extensions: ["db"],
-        },
-      ],
-    });
+  async function exportarBackup(nomeArquivo: string) {
+    try {
+      const destino = await save({
+        defaultPath: nomeArquivo,
+        filters: [
+          {
+            name: "Banco SQLite",
+            extensions: ["db"],
+          },
+        ],
+      });
 
-    if (!destino) return;
+      if (!destino) return;
 
-    await invoke("exportar_backup", {
-      backupPath: `/home/caua/.config/com.caua.estoque/backups/${nomeArquivo}`,
-      destino,
-    });
+      // Resolve dinamicamente o caminho de origem do backup interno
+      const configDir = await appConfigDir();
+      const caminhoOrigemBackup = await join(configDir, "backups", nomeArquivo);
 
-    alert("Backup exportado com sucesso!");
-  } catch (error) {
-    console.error(error);
-    alert("Erro ao exportar backup");
+      await invoke("exportar_backup", {
+        backupPath: caminhoOrigemBackup, // 👈 Envia a origem dinâmica
+        destino,
+      });
+
+      alert("Backup exportado com sucesso!");
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao exportar backup");
+    }
   }
-}
 
   useEffect(() => {
     carregarBackups();
   }, []);
 
-  const totalPaginas = Math.ceil(
-    backups.length / ITENS_POR_PAGINA
-  );
+  const totalPaginas = Math.ceil(backups.length / ITENS_POR_PAGINA);
 
   const backupsPaginados = useMemo(() => {
-    const inicio =
-      (paginaAtual - 1) * ITENS_POR_PAGINA;
-
-    return backups.slice(
-      inicio,
-      inicio + ITENS_POR_PAGINA
-    );
+    const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
+    return backups.slice(inicio, inicio + ITENS_POR_PAGINA);
   }, [backups, paginaAtual]);
 
   return (
@@ -165,13 +175,8 @@ async function exportarBackup(nomeArquivo: string) {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-[#001e40]">
-            Backups
-          </h1>
-
-          <p className="text-slate-500 text-sm">
-            Gerencie os backups do banco local.
-          </p>
+          <h1 className="text-3xl font-bold text-[#001e40]">Backups</h1>
+          <p className="text-slate-500 text-sm">Gerencie os backups do banco local.</p>
         </div>
 
         <button
@@ -180,48 +185,36 @@ async function exportarBackup(nomeArquivo: string) {
           className="bg-[#00658d] hover:bg-[#005577] text-white px-5 py-3 rounded-xl font-semibold flex items-center gap-2"
         >
           <Download size={18} />
+          {loading ? "Criando..." : "Criar Backup"}
+          
+        </button>
 
-          {loading
-            ? "Criando..."
-            : "Criar Backup"}
+        <button
+          onClick={importarBackup}
+          className="bg-[#00658d] hover:bg-[#005577] text-white px-5 py-3 rounded-xl font-semibold flex items-center gap-2"
+        >
+          <Upload size={18} />
+          Importar Backup
         </button>
       </div>
 
       {/* Estatísticas */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl border p-5 border-slate-200">
-          <p className="text-xs uppercase text-slate-400 font-bold">
-            Total de Backups
-          </p>
+          <p className="text-xs uppercase text-slate-400 font-bold">Total de Backups</p>
+          <p className="text-3xl font-bold text-[#001e40] mt-2">{backups.length}</p>
+        </div>
 
+        <div className="bg-white rounded-2xl border p-5 border-slate-200">
+          <p className="text-xs uppercase text-slate-400 font-bold">Espaço Utilizado</p>
           <p className="text-3xl font-bold text-[#001e40] mt-2">
-            {backups.length}
+            {formatarTamanho(backups.reduce((acc, curr) => acc + curr.tamanho_bytes, 0))}
           </p>
         </div>
 
         <div className="bg-white rounded-2xl border p-5 border-slate-200">
-          <p className="text-xs uppercase text-slate-400 font-bold">
-            Espaço Utilizado
-          </p>
-
-          <p className="text-3xl font-bold text-[#001e40] mt-2">
-            {formatarTamanho(
-              backups.reduce(
-                (acc, curr) => acc + curr.tamanho_bytes,
-                0
-              )
-            )}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-2xl border p-5 border-slate-200">
-          <p className="text-xs uppercase text-slate-400 font-bold">
-            Último Backup
-          </p>
-
-          <p className="text-lg font-bold text-[#001e40] mt-2">
-            {backups[0]?.data ?? "-"}
-          </p>
+          <p className="text-xs uppercase text-slate-400 font-bold">Último Backup</p>
+          <p className="text-lg font-bold text-[#001e40] mt-2">{backups[0]?.data ?? "-"}</p>
         </div>
       </div>
 
@@ -230,105 +223,56 @@ async function exportarBackup(nomeArquivo: string) {
         <table className="w-full">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-6 py-4 text-xs uppercase text-slate-500">
-                Arquivo
-              </th>
-
-              <th className="text-left px-6 py-4 text-xs uppercase text-slate-500">
-                Data
-              </th>
-
-              <th className="text-left px-6 py-4 text-xs uppercase text-slate-500">
-                Tamanho
-              </th>
-              <th className="text-left px-6 py-4 text-xs uppercase text-slate-500">
-                Ações
-              </th>
+              <th className="text-left px-6 py-4 text-xs uppercase text-slate-500">Arquivo</th>
+              <th className="text-left px-6 py-4 text-xs uppercase text-slate-500">Data</th>
+              <th className="text-left px-6 py-4 text-xs uppercase text-slate-500">Tamanho</th>
+              <th className="text-left px-6 py-4 text-xs uppercase text-slate-500">Ações</th>
             </tr>
           </thead>
 
           <tbody>
             {backupsPaginados.length > 0 ? (
               backupsPaginados.map((backup) => (
-                <tr
-                  key={backup.nome}
-                  className="border-b border-slate-100 hover:bg-slate-50"
-                >
+                <tr key={backup.nome} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <Database
-                        size={18}
-                        className="text-blue-600"
-                      />
-
-                      <span className="font-medium">
-                        {backup.nome}
-                      </span>
+                      <Database size={18} className="text-blue-600" />
+                      <span className="font-medium">{backup.nome}</span>
                     </div>
                   </td>
 
-                  <td className="px-6 py-4 text-slate-500">
-                    {backup.data}
-                  </td>
-
-                  <td className="px-6 py-4 text-slate-500">
-                    {formatarTamanho(
-                      backup.tamanho_bytes
-                    )}
-                  </td>
+                  <td className="px-6 py-4 text-slate-500">{backup.data}</td>
+                  <td className="px-6 py-4 text-slate-500">{formatarTamanho(backup.tamanho_bytes)}</td>
                   <td className="px-6 py-4">
                     <div className="flex gap-2">
                       <button
-                        onClick={() =>
-                          restaurarBackup(backup.nome)
-                        }
-                        className="
-                          flex items-center gap-2
-                          px-3 py-2
-                          rounded-lg
-                          bg-blue-50
-                          hover:bg-blue-100
-                          text-blue-600
-                          transition-all
-                        "
+                        onClick={() => restaurarBackup(backup.nome)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-all"
                       >
                         <RotateCcw size={16} />
                         Restaurar
                       </button>
 
                       <button
-                        onClick={() =>
-                          excluirBackup(backup.nome)
-                        }
-                        className="
-                          flex items-center gap-2
-                          px-3 py-2
-                          rounded-lg
-                          bg-red-50
-                          hover:bg-red-100
-                          text-red-600
-                          transition-all
-                        "
+                        onClick={() => excluirBackup(backup.nome)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-all"
                       >
                         <Trash2 size={16} />
                       </button>
-                        <button
-                          onClick={() => exportarBackup(backup.nome)}
-                          className="px-3 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700"
-                        >
-                          <Share size={16} />
-                        </button>
-
+                      
+                      <button
+                        onClick={() => exportarBackup(backup.nome)}
+                        className="px-3 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-all"
+                      >
+                        <Share size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td
-                  colSpan={3}
-                  className="text-center py-10 text-slate-400"
-                >
+                <td colSpan={4} className="text-center py-10 text-slate-400">
                   Nenhum backup encontrado.
                 </td>
               </tr>
@@ -339,17 +283,12 @@ async function exportarBackup(nomeArquivo: string) {
         {/* Paginação */}
         <div className="flex justify-between items-center px-6 py-4 border-t border-slate-200 bg-slate-50">
           <span className="text-sm text-slate-500">
-            Página {paginaAtual} de{" "}
-            {Math.max(totalPaginas, 1)}
+            Página {paginaAtual} de {Math.max(totalPaginas, 1)}
           </span>
 
           <div className="flex gap-2">
             <button
-              onClick={() =>
-                setPaginaAtual((p) =>
-                  Math.max(1, p - 1)
-                )
-              }
+              onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
               disabled={paginaAtual === 1}
               className="p-2 border rounded-lg disabled:opacity-50"
             >
@@ -357,18 +296,8 @@ async function exportarBackup(nomeArquivo: string) {
             </button>
 
             <button
-              onClick={() =>
-                setPaginaAtual((p) =>
-                  Math.min(
-                    totalPaginas,
-                    p + 1
-                  )
-                )
-              }
-              disabled={
-                paginaAtual === totalPaginas ||
-                totalPaginas === 0
-              }
+              onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
+              disabled={paginaAtual === totalPaginas || totalPaginas === 0}
               className="p-2 border rounded-lg disabled:opacity-50"
             >
               <ChevronRight size={18} />

@@ -46,3 +46,32 @@ export const atualizarStatusCliente = async (id: string, status: string) => {
         [status, id]
     );
 }
+
+
+export const atualizarCliente = async (
+  id: string, 
+  data: {
+    nome: string;
+    telefone?: string | null;
+    endereco?: string | null;
+    observacoes?: string | null;
+  }
+) => {
+  const db = await getDb();
+
+  await db.execute(
+    `UPDATE clientes 
+     SET nome = ?, 
+         telefone = ?, 
+         endereco = ?, 
+         observacoes = ?
+     WHERE id = ?`,
+    [
+      data.nome,
+      data.telefone ?? null,
+      data.endereco ?? null,
+      data.observacoes ?? null,
+      id
+    ]
+  );
+};

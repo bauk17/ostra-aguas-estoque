@@ -8,17 +8,19 @@ import {
   Loader2,
   Trash2,
   MapPin,
-  Phone
+  Phone,
+  Edit3 // Importado para o botão de editar
 } from 'lucide-react';
 import AddClienteModal from '../../features/clientes/components/AddCustomer';
+import EditClienteModal from '../../features/clientes/components/EditCustomer';
 import { listarClientes, deletarCliente } from '../../features/clientes/repository';
 
 // Interface mapeada exatamente igual à estrutura do seu banco de dados
 interface Cliente {
   id: string;
   nome: string;
-  telefone?: string;
-  endereco?: string;
+  telefone?: string | null;
+  endereco?: string | null;
   created_at: string;
   observacoes?: string | null;
 }
@@ -29,6 +31,10 @@ const ClientesPage = () => {
   const [loading, setLoading] = useState(true);
   const [filtroTexto, setFiltroTexto] = useState('');
 
+  // --- ESTADOS PARA EDIÇÃO ---
+  const [clienteParaEditar, setClienteParaEditar] = useState<Cliente | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
   // --- ESTADOS PARA PAGINAÇÃO ---
   const [paginaAtual, setPaginaAtual] = useState(1);
   const itensPorPagina = 5;
@@ -38,7 +44,7 @@ const ClientesPage = () => {
     setLoading(true);
     try {
       const dados = await listarClientes();
-      setClientes(dados);
+      setClientes(dados as Cliente[]);
     } catch (error) {
       console.error("Erro ao carregar clientes do banco:", error);
     } finally {
@@ -102,7 +108,7 @@ const ClientesPage = () => {
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
         <div>
           <h2 className="text-3xl font-bold text-[#001e40] mb-1 font-manrope">Diretório de Clientes</h2>
-          <p className="text-slate-500">Gerencie sua base de consumidores cadastrados no sistema.</p>
+          <p className="text-slate-500">Gerencie sua base de consumidores cadastrados no system.</p>
         </div>
         
         <div className="flex items-center gap-4">
@@ -154,7 +160,7 @@ const ClientesPage = () => {
                 <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contato</th>
                 <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Data de Cadastro</th>
                 <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Observações</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ações</th>
+                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-blue-50">
@@ -174,7 +180,6 @@ const ClientesPage = () => {
                   </td>
                 </tr>
               ) : (
-                // Mapeia a lista fatiada (máximo de 5 registros)
                 clientesPaginados.map((cliente) => (
                   <tr key={cliente.id} className="hover:bg-blue-50/30 transition-colors group">
                     {/* Nome & ID */}
@@ -218,11 +223,28 @@ const ClientesPage = () => {
                       </p>
                     </td>
 
-                    {/* Ações */}
+                    {/* Ações Integradas */}
                     <td className="px-8 py-5 text-right">
-                      <button className="text-slate-400 hover:text-[#e9323b] transition-colors">
-                        <Trash2 size={20} onClick={() => handleDeletarCliente(cliente.id)}/>
-                      </button>
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        
+                        {/* BOTÃO EDITAR CLIENTE */}
+                        <button 
+                          onClick={() => {
+                            setClienteParaEditar(cliente);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="p-1.5 text-slate-300 hover:text-blue-600 transition-colors"
+                        >
+                          <Edit3 size={18} />
+                        </button>
+
+                        <button 
+                          onClick={() => handleDeletarCliente(cliente.id)}
+                          className="p-1.5 text-slate-300 hover:text-[#e9323b] transition-colors"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -287,6 +309,19 @@ const ClientesPage = () => {
         onClose={() => setIsModalOpen(false)} 
         onSuccess={() => {
           carregarClientes(); // Atualiza a tabela imediatamente após registrar
+        }}
+      />
+
+      {/* NOVO: Modal de Edição Integrado */}
+      <EditClienteModal
+        open={isEditModalOpen}
+        cliente={clienteParaEditar}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setClienteParaEditar(null);
+        }}
+        onSuccess={() => {
+          carregarClientes(); // Recarrega a tabela imediatamente após atualizar no banco
         }}
       />
     </div>
