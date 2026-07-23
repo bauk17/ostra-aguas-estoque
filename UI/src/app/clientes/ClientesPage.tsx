@@ -13,7 +13,14 @@ import {
 } from 'lucide-react';
 import AddClienteModal from '../../features/clientes/components/AddCustomer';
 import EditClienteModal from '../../features/clientes/components/EditCustomer';
-import { listarClientes, deletarCliente } from '../../features/clientes/repository';
+
+
+import {
+    listarClientes,
+    criarCliente,
+    atualizarCliente,
+    excluirCliente,
+} from "../../features/clientes/repository"
 
 // Interface mapeada exatamente igual à estrutura do seu banco de dados
 interface Cliente {
@@ -90,7 +97,7 @@ const ClientesPage = () => {
 
   function handleDeletarCliente(id: string): void {
     if (confirm("Tem certeza que deseja deletar este cliente? Esta ação não pode ser desfeita.")) {
-      deletarCliente(id)
+      excluirCliente(id)
         .then(() => {
           // Após deletar, recarrega a lista de clientes para refletir a mudança
           carregarClientes();

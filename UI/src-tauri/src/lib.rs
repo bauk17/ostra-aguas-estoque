@@ -1,4 +1,13 @@
-use tauri_plugin_sql::Builder as SqlBuilder;
+mod database;
+mod commands;
+mod repositories;
+mod models;
+
+use commands::cliente::*;
+use commands::carga::*;
+use commands::pedido::*;
+use commands::movimentacao::*;
+use database::connection::DbState;
 use std::fs;
 use tauri::Manager;
 use serde::Serialize;
@@ -259,7 +268,7 @@ fn importar_backup(
             .map_err(|e| e.to_string())?;
     }
 
-    let backup_file_name = std::path::Path::new(&backup_path)
+    let _backup_file_name = std::path::Path::new(&backup_path)
         .file_name()
         .ok_or("Invalid backup path")?
         .to_string_lossy()
@@ -290,10 +299,14 @@ fn caminho_banco(app: tauri::AppHandle) -> Result<String, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            let db = DbState::new(app.handle())?;
+            app.manage(db);
+            Ok(())
+        })
         .plugin(tauri_plugin_opener::init())
-        .plugin(SqlBuilder::default().build())
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![greet, criar_backup, listar_backups, restaurar_backup, verificar_backup_diario, excluir_backup, exportar_backup, importar_backup, caminho_banco])
+        .invoke_handler(tauri::generate_handler![greet, criar_backup, listar_backups, restaurar_backup, verificar_backup_diario, excluir_backup, exportar_backup, importar_backup, caminho_banco, listar_clientes, buscar_cliente, criar_cliente, atualizar_cliente, excluir_cliente, listar_cargas, criar_carga, excluir_carga, listar_movimentacoes, criar_movimentacao, excluir_movimentacao, listar_pedidos, criar_pedido, atualizar_pedido, atualizar_status_pedido, excluir_pedido, buscar_pedido])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

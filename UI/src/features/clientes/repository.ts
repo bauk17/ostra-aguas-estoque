@@ -1,77 +1,18 @@
-
-import { getDb } from "../../lib/db/client";
-
-import type { Cliente } from "./types";
-
-export async function criarCliente(cliente: Cliente) {
-  const db = await getDb();
-
-  await db.execute(
-    `INSERT INTO clientes (id, nome, telefone, endereco, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    [
-      cliente.id,
-      cliente.nome,
-      cliente.telefone ?? null,
-      cliente.endereco ?? null,
-      cliente.created_at,
-    ]
-  );
-}
+import { invoke } from "@tauri-apps/api/core";
+import { Cliente } from "../../features/clientes/types";
 
 export async function listarClientes(): Promise<Cliente[]> {
-  const db = await getDb();
-
-  const result = await db.select(
-    `SELECT * FROM clientes ORDER BY nome ASC`
-  );
-
-  return result as Cliente[];
+    return await invoke("listar_clientes");
 }
 
-export const deletarCliente = async (id: string) => {
-    const db = await getDb();
-
-    await db.execute(
-        `DELETE FROM clientes WHERE id = ?`,
-        [id]
-    );
+export async function criarCliente(cliente: Cliente): Promise<void> {
+    await invoke("criar_cliente", { cliente });
 }
 
-export const atualizarStatusCliente = async (id: string, status: string) => {
-    const db = await getDb();
-
-    await db.execute(
-        `UPDATE clientes SET status = ? WHERE id = ?`,
-        [status, id]
-    );
+export async function atualizarCliente(cliente: Cliente): Promise<void> {
+    await invoke("atualizar_cliente", { cliente });
 }
 
-
-export const atualizarCliente = async (
-  id: string, 
-  data: {
-    nome: string;
-    telefone?: string | null;
-    endereco?: string | null;
-    observacoes?: string | null;
-  }
-) => {
-  const db = await getDb();
-
-  await db.execute(
-    `UPDATE clientes 
-     SET nome = ?, 
-         telefone = ?, 
-         endereco = ?, 
-         observacoes = ?
-     WHERE id = ?`,
-    [
-      data.nome,
-      data.telefone ?? null,
-      data.endereco ?? null,
-      data.observacoes ?? null,
-      id
-    ]
-  );
-};
+export async function excluirCliente(id: string): Promise<void> {
+    await invoke("excluir_cliente", { id });
+}
