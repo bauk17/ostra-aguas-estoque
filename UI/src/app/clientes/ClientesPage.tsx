@@ -17,20 +17,10 @@ import EditClienteModal from '../../features/clientes/components/EditCustomer';
 
 import {
     listarClientes,
-    criarCliente,
-    atualizarCliente,
     excluirCliente,
 } from "../../features/clientes/repository"
+import type { Cliente } from "../../features/clientes/types"
 
-// Interface mapeada exatamente igual à estrutura do seu banco de dados
-interface Cliente {
-  id: string;
-  nome: string;
-  telefone?: string | null;
-  endereco?: string | null;
-  created_at: string;
-  observacoes?: string | null;
-}
 
 const ClientesPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -226,7 +216,7 @@ const ClientesPage = () => {
                     {/* Observações */}
                     <td className="px-8 py-5">
                       <p className="text-xs text-slate-400 italic max-w-45 truncate">
-                        {cliente.observacoes || 'Sem notas'}
+                        
                       </p>
                     </td>
 

@@ -27,6 +27,7 @@ pub fn obter_metricas(db: &DbState) -> Result<DashboardMetricas, String> {
             SELECT COALESCE(SUM(p.valor_total), 0.0)
             FROM pedidos p
             WHERE substr(p.created_at, 1, 7) = ?1
+              AND UPPER(p.status) = 'ENTREGUE'
             ",
             [mes_ref.clone()],
             |row| row.get(0),

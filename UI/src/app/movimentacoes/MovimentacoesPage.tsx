@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import {
-  Search,Filter,Calendar,Download,ChevronLeft,ChevronRight
+  Search,Filter,Calendar,Download,ChevronLeft,ChevronRight,Info
 } from 'lucide-react';
 import { listarMovimentacoes } from '../../features/movimentacoes/repository';
 import type { Movimentacao } from '../../features/movimentacoes/types';
+import MovimentacaoDetalhes from '../../features/movimentacoes/components/MovimentacaoDetalhes';
+import { formatMovimentacaoDescricao } from '../../features/movimentacoes/utils/formatMovimentacaoDescricao';
 
 
 export default function MovimentacoesPage() {
@@ -36,6 +38,7 @@ export default function MovimentacoesPage() {
   // Estados de Paginação
   const [paginaAtual, setPaginaAtual] = useState(1);
   const itensPorPagina = 6;
+  const [movimentacaoSelecionada, setMovimentacaoSelecionada] = useState<Movimentacao | null>(null);
 
 
 
@@ -142,13 +145,18 @@ export default function MovimentacoesPage() {
                 <th className="px-6 py-4 uppercase tracking-wider">Data/Hora</th>
                 <th className="px-6 py-4 uppercase tracking-wider">Produto</th>
                 <th className="px-6 py-4 uppercase tracking-wider">Tipo</th>
+                <th className="px-6 py-4 uppercase tracking-wider">Descrição</th>
                 <th className="px-6 py-4 uppercase tracking-wider">Quantidade</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-blue-50 text-sm">
               {registrosPaginados.length > 0 ? (
                 registrosPaginados.map((mov) => (
-                  <tr key={mov.id} className="hover:bg-blue-50/10 transition-colors">
+                  <tr
+                    key={mov.id}
+                    onClick={() => setMovimentacaoSelecionada(mov)}
+                    className="hover:bg-blue-50/30 transition-colors cursor-pointer group"
+                  >
                     <td className="px-6 py-4 font-mono font-bold text-[#00658d]">#{mov.id.slice(0, 8) + "..."}</td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
@@ -179,13 +187,24 @@ export default function MovimentacoesPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-600 text-sm font-medium">
+                          {formatMovimentacaoDescricao(mov)}
+                        </span>
+                        <Info
+                          size={14}
+                          className="text-slate-300 group-hover:text-[#00658d] transition-colors shrink-0"
+                        />
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
                       <span className="text-slate-400 text-sm">{mov.quantidade}</span>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-slate-400 font-medium">
+                  <td colSpan={7} className="px-6 py-10 text-center text-slate-400 font-medium">
                     Nenhuma movimentação encontrada para os filtros selecionados.
                   </td>
                 </tr>
@@ -233,6 +252,10 @@ export default function MovimentacoesPage() {
         </div>
       </section>
 
+      <MovimentacaoDetalhes
+        movimentacao={movimentacaoSelecionada}
+        onClose={() => setMovimentacaoSelecionada(null)}
+      />
      
     </div>
   );

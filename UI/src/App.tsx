@@ -7,8 +7,6 @@ import ClientesPage from "./app/clientes/ClientesPage";
 import PedidosPage from "./app/pedidos/PedidosPage";
 import MovimentacoesPage from "./app/movimentacoes/MovimentacoesPage";
 import BackupPage from "./app/backups/BackupPage";
-import { useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
 
 function App() {
   

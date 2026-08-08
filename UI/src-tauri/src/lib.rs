@@ -40,6 +40,7 @@ pub fn run() {
 
             // Cargas
             listar_cargas,
+            buscar_carga,
             criar_carga,
             excluir_carga,
 

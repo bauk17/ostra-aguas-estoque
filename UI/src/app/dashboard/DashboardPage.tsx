@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { Sidebar } from "../../components/layout/Sidebar";
 import { Loader2, CircleDollarSign, TrendingUp, CalendarArrowUp, UserRound, ArrowRight } from 'lucide-react';
 import { listarPedidos } from '../../features/pedidos/repository';
 
 interface PedidoRecente {
+  created_at: any;
   id: string;
   cliente: string; // Nome obtido via INNER JOIN no banco
   produto: string;
@@ -19,7 +21,26 @@ interface DashboardMetricas {
   novos_clientes: number;
 }
 
+function parseValorTotal(valor: number | string): number {
+  if (typeof valor === 'number') return valor;
+  return parseFloat(valor.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
+}
+
+function calcularMetricasPedidos(pedidos: PedidoRecente[]) {
+  const mesRef = new Date().toISOString().slice(0, 7);
+
+  return {
+    vendasMes: pedidos
+      .filter((p) => p.status === 'Entregue' && p.created_at?.slice(0, 7) === mesRef)
+      .reduce((acc, p) => acc + parseValorTotal(p.valor_total), 0),
+    entregasAtivas: pedidos.filter(
+      (p) => p.status === 'Pendente' || p.status === 'Em Rota',
+    ).length,
+  };
+}
+
 export default function DashboardPage() {
+  const location = useLocation();
   const [pedidos, setPedidos] = useState<PedidoRecente[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,29 +50,34 @@ export default function DashboardPage() {
     novosClientes: 0
   });
 
-  useEffect(() => {
-    const buscarDadosDashboard = async () => {
-      setLoading(true);
-      try {
-        const [todosPedidos, metricasDb] = await Promise.all([
-          listarPedidos() as Promise<PedidoRecente[]>,
-          invoke<DashboardMetricas>('obter_metricas_dashboard'),
-        ]);
-        setPedidos(todosPedidos);
-        setMetricas({
-          vendasMes: metricasDb.vendas_mes,
-          entregasAtivas: metricasDb.entregas_ativas,
-          novosClientes: metricasDb.novos_clientes,
-        });
-      } catch (error) {
-        console.error("Erro ao carregar dados do dashboard:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const buscarDadosDashboard = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [todosPedidos, metricasDb] = await Promise.all([
+        listarPedidos() as Promise<PedidoRecente[]>,
+        invoke<DashboardMetricas>('obter_metricas_dashboard'),
+      ]);
 
-    buscarDadosDashboard();
+      const metricasPedidos = calcularMetricasPedidos(todosPedidos);
+
+      setPedidos(todosPedidos);
+      setMetricas({
+        vendasMes: metricasPedidos.vendasMes,
+        entregasAtivas: metricasPedidos.entregasAtivas,
+        novosClientes: metricasDb.novos_clientes,
+      });
+    } catch (error) {
+      console.error("Erro ao carregar dados do dashboard:", error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    if (location.pathname === '/dashboard') {
+      buscarDadosDashboard();
+    }
+  }, [location.pathname, buscarDadosDashboard]);
 
   // --- LÓGICA DE LIMITAÇÃO ---
   // Pega apenas os 5 primeiros pedidos retornados do repositório
@@ -88,6 +114,7 @@ export default function DashboardPage() {
                 </span>
               </div>
               <p className="text-xs text-slate-500 uppercase font-semibold tracking-wider">Vendas Totais (Mês)</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">Somente pedidos entregues</p>
               <h3 className="font-headline-md text-2xl font-bold text-primary mt-1">
                 {metricas.vendasMes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </h3>

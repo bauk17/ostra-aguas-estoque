@@ -162,14 +162,7 @@ export default function EditPedidoModal({ open, pedido, onClose, onSuccess }: Pr
 
     try {
       // Executa a atualização passando o ID original do pedido
-      await atualizarPedido(pedido.id, {
-        cliente_id: formData.cliente_id, 
-        produto: formData.produto,
-        quantidade: qtdFinal,
-        preco_unitario: precoFinal,
-        valor_total: valorTotal,
-        status: formData.status,
-      });
+      await atualizarPedido(pedido.id);
 
       if (onSuccess) onSuccess();
       onClose();

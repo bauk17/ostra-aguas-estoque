@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Package, Users, ShoppingCart, LogOut, NotebookText } from 'lucide-react';
+import { LayoutDashboard, Package, Users, ShoppingCart, NotebookText } from 'lucide-react';
 
 export const Sidebar = () => {
   return (

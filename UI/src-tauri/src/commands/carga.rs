@@ -26,6 +26,16 @@ pub fn criar_carga(
 }
 
 #[tauri::command]
+pub fn buscar_carga(
+    db: State<DbState>,
+    id: String,
+) -> Result<Option<Carga>, String> {
+
+    CargaRepository::buscar_por_id(&db, &id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn excluir_carga(
     db: State<DbState>,
     id: String,

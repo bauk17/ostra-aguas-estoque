@@ -16,9 +16,7 @@ import EditPedidoModal from '../../features/pedidos/components/EditPedido';
 
 import { formatarData } from '../../utilities/formatarData';
 
-import { listarPedidos } from "../../features/pedidos/repository";
-
-import { atualizarStatusPedido } from '../../features/pedidos/repository';
+import { listarPedidos, atualizarStatusPedido, deletarPedido } from "../../features/pedidos/repository";
 
 
 
@@ -90,7 +88,7 @@ const PedidosPage: React.FC = () => {
 
       const dados = await listarPedidos();
 
-      setPedidos(dados as Pedido[]);
+      setPedidos(dados as unknown as Pedido[]);
 
     } catch (error) {
 
@@ -215,23 +213,27 @@ const PedidosPage: React.FC = () => {
 
 
 
-  function handleDeletarPedido(id: string): void {
+  async function handleDeletarPedido(id: string) {
     const pedidoExistente = pedidos.find(pedido => pedido.id === id);
     if (!pedidoExistente) {
       console.warn(`Pedido com id ${id} não encontrado para exclusão.`);
       return;
-
     }
-    const confirmar = window.confirm(`Deseja realmente excluir o pedido de ${pedidoExistente.cliente}?`);
 
+    const confirmar = window.confirm(`Deseja realmente excluir o pedido de ${pedidoExistente.cliente}?`);
     if (!confirmar) return;
 
+    try {
+      await deletarPedido(id);
+      setPedidos(prevPedidos => prevPedidos.filter(pedido => pedido.id !== id));
 
-
-    setPedidos(prevPedidos => prevPedidos.filter(pedido => pedido.id !== id));
-
-    setPaginaAtual(1);
-
+      if (pedidosFiltrados.length === 1 && paginaAtual > 1) {
+        setPaginaAtual(prev => prev - 1);
+      }
+    } catch (error) {
+      console.error('Erro ao excluir pedido:', error);
+      alert('Não foi possível excluir o pedido.');
+    }
   }
 
 
