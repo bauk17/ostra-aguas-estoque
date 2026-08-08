@@ -18,6 +18,10 @@ impl DbState {
         fs::create_dir_all(&app_dir)
             .map_err(|e| e.to_string())?;
 
+        
+        
+        super::pending_restore::aplicar_restore_pendente(app)?;
+        
         let db_path = app_dir.join("estoque.db");
 
         let conn = Connection::open(db_path)
@@ -39,4 +43,6 @@ impl DbState {
             conn: Mutex::new(conn),
         })
     }
+
+    
 }

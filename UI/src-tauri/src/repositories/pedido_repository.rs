@@ -1,4 +1,4 @@
-use rusqlite::{params, Result};
+use rusqlite::{params, Result, Connection};
 
 use crate::{
     database::connection::DbState,
@@ -170,16 +170,28 @@ impl PedidoRepository {
 
         let conn = Repository::conn(db);
 
+        Self::atualizar_status_conn(&conn, id, status)
+    }
+
+    pub fn atualizar_status_conn(
+    conn: &Connection,
+    id: &str,
+    status: &str,
+    ) -> Result<()> {
+
         conn.execute(
             "
             UPDATE pedidos
             SET status = ?
             WHERE id = ?
             ",
-            params![status, id],
+            params![
+                status,
+                id,
+            ],
         )?;
 
-        Ok(())
+         Ok(())
     }
 
     // ============================

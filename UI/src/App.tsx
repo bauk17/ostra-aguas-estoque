@@ -12,21 +12,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 function App() {
   
-  useEffect(() => {
-    async function verificarBackupDiario() {
-      try {
-        const resultado = await invoke<boolean>("verificar_backup_diario");
-        if (resultado) {
-          alert("Um backup diário foi criado com sucesso!");
-        }
-      } catch (error) {
-        console.error(error);
-        alert("Erro ao verificar backup diário");
-      }
-    }
-
-    verificarBackupDiario();
-  }, []);
+  
 
   return (
     <BrowserRouter>

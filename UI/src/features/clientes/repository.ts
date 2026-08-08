@@ -1,8 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Cliente } from "../../features/clientes/types";
+import type { Cliente } from "../../features/clientes/types";
 
 export async function listarClientes(): Promise<Cliente[]> {
     return await invoke("listar_clientes");
+}
+
+export async function buscarCliente(id: string): Promise<Cliente | null> {
+    return await invoke("buscar_cliente", { id });
 }
 
 export async function criarCliente(cliente: Cliente): Promise<void> {

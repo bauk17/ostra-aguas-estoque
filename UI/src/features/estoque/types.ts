@@ -6,6 +6,7 @@ export type Carga = {
   preco_venda: number | null;
   lucro_esperado: number | null;
   quebras: number | null;
+  valor_quebras: number | null;
   created_at: string;
 };
 

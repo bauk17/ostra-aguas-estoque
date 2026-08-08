@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { Sidebar } from "../../components/layout/Sidebar";
 import { Loader2, CircleDollarSign, TrendingUp, CalendarArrowUp, UserRound, ArrowRight } from 'lucide-react';
 import { listarPedidos } from '../../features/pedidos/repository';
@@ -12,23 +13,36 @@ interface PedidoRecente {
   status: 'Pendente' | 'Em Rota' | 'Entregue' | string;
 }
 
+interface DashboardMetricas {
+  vendas_mes: number;
+  entregas_ativas: number;
+  novos_clientes: number;
+}
+
 export default function DashboardPage() {
   const [pedidos, setPedidos] = useState<PedidoRecente[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Estados para os Cards de Métricas
-  const [metricas] = useState({
-    vendasMes: 42850.00,
-    entregasAtivas: 18,
-    novosClientes: 24
+  const [metricas, setMetricas] = useState({
+    vendasMes: 0,
+    entregasAtivas: 0,
+    novosClientes: 0
   });
 
   useEffect(() => {
     const buscarDadosDashboard = async () => {
       setLoading(true);
       try {
-        const todosPedidos = await listarPedidos() as PedidoRecente[];
+        const [todosPedidos, metricasDb] = await Promise.all([
+          listarPedidos() as Promise<PedidoRecente[]>,
+          invoke<DashboardMetricas>('obter_metricas_dashboard'),
+        ]);
         setPedidos(todosPedidos);
+        setMetricas({
+          vendasMes: metricasDb.vendas_mes,
+          entregasAtivas: metricasDb.entregas_ativas,
+          novosClientes: metricasDb.novos_clientes,
+        });
       } catch (error) {
         console.error("Erro ao carregar dados do dashboard:", error);
       } finally {

@@ -4,7 +4,7 @@ use crate::{
     database::connection::DbState,
     models::pedido::Pedido,
     models::pedidoView::PedidoView,
-    repositories::pedido_repository::PedidoRepository,
+    services::pedido_service::PedidoService,
 };
 
 #[tauri::command]
@@ -12,7 +12,7 @@ pub fn listar_pedidos(
     db: State<DbState>,
 ) -> Result<Vec<PedidoView>, String> {
 
-    PedidoRepository::listar(&db)
+    PedidoService::listar(&db)
         .map_err(|e| e.to_string())
 }
 
@@ -22,7 +22,7 @@ pub fn criar_pedido(
     pedido: Pedido,
 ) -> Result<(), String> {
 
-    PedidoRepository::criar(&db, &pedido)
+    PedidoService::criar(&db, &pedido)
         .map_err(|e| e.to_string())
 }
 
@@ -32,7 +32,7 @@ pub fn atualizar_pedido(
     pedido: Pedido,
 ) -> Result<(), String> {
 
-    PedidoRepository::atualizar(&db, &pedido)
+    PedidoService::atualizar(&db, &pedido)
         .map_err(|e| e.to_string())
 }
 
@@ -43,7 +43,7 @@ pub fn atualizar_status_pedido(
     status: String,
 ) -> Result<(), String> {
 
-    PedidoRepository::atualizar_status(
+    PedidoService::atualizar_status(
         &db,
         &id,
         &status,
@@ -57,7 +57,7 @@ pub fn excluir_pedido(
     id: String,
 ) -> Result<(), String> {
 
-    PedidoRepository::excluir(&db, &id)
+    PedidoService::excluir(&db, &id)
         .map_err(|e| e.to_string())
 }
 
@@ -67,9 +67,6 @@ pub fn buscar_pedido(
     id: String,
 ) -> Result<Option<Pedido>, String> {
 
-    PedidoRepository::buscar_por_id(
-        &db,
-        &id,
-    )
-    .map_err(|e| e.to_string())
+    PedidoService::buscar(&db, &id)
+        .map_err(|e| e.to_string())
 }

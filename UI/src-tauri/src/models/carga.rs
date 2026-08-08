@@ -10,6 +10,7 @@ pub struct Carga {
     pub preco_venda: Option<f64>,
     pub lucro_esperado: Option<f64>,
     pub quebras: Option<i64>,
+    pub valor_quebras: Option<f64>,
     pub created_at: String,
 }
 
@@ -23,6 +24,7 @@ impl Carga {
             preco_venda: row.get("preco_venda")?,
             lucro_esperado: row.get("lucro_esperado")?,
             quebras: row.get("quebras")?,
+            valor_quebras: row.get("valor_quebras")?,
             created_at: row.get("created_at")?,
         })
     }

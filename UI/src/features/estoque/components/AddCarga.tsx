@@ -20,6 +20,7 @@ export default function AddCargaModal({ open, onClose, onSuccess, statusMsg }: P
     custo_unitario: '',
     preco_venda: '',
     quebras: '',
+    valor_quebras: '',
     retornaveis: '',
   });
 
@@ -52,6 +53,7 @@ export default function AddCargaModal({ open, onClose, onSuccess, statusMsg }: P
     const custo = parseFloat(formData.custo_unitario.replace(',', '.')) || 0;
     const venda = parseFloat(formData.preco_venda.replace(',', '.')) || 0;
     const quebras = Number(formData.quebras) || 0;
+    const valorQuebras = parseFloat(formData.valor_quebras.replace(',', '.')) || 0;
     const retornaveis = Number(formData.retornaveis) || 0;
 
     try {
@@ -61,6 +63,7 @@ export default function AddCargaModal({ open, onClose, onSuccess, statusMsg }: P
         custo_unitario: custo,
         preco_venda: venda,
         quebras: quebras,
+        valor_quebras: valorQuebras,
         retornaveis: retornaveis,
       });
 
@@ -74,6 +77,7 @@ export default function AddCargaModal({ open, onClose, onSuccess, statusMsg }: P
         custo_unitario: '',
         preco_venda: '',
         quebras: '',
+        valor_quebras: '',
         retornaveis: '',
       });
       onClose();
@@ -184,14 +188,24 @@ export default function AddCargaModal({ open, onClose, onSuccess, statusMsg }: P
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
               <h3 className="font-bold text-[#001e40] mb-4">3. Quebras</h3>
-              <input
-                name="quebras"
-                type="text"
-                placeholder="Quantidade un."
-                value={formData.quebras}
-                onChange={handleInputChange}
-                className="border border-slate-200 rounded-xl p-3 w-full outline-none bg-white font-semibold"
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  name="quebras"
+                  type="text"
+                  placeholder="Quantidade un."
+                  value={formData.quebras}
+                  onChange={handleInputChange}
+                  className="border border-slate-200 rounded-xl p-3 w-full outline-none bg-white font-semibold"
+                />
+                <input
+                  name="valor_quebras"
+                  type="text"
+                  placeholder="Custo por quebra (R$)"
+                  value={formData.valor_quebras}
+                  onChange={handleInputChange}
+                  className="border border-slate-200 rounded-xl p-3 w-full outline-none bg-white font-semibold"
+                />
+              </div>
             </div>
 
           </div>

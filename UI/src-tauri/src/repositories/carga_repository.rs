@@ -23,6 +23,7 @@ impl CargaRepository {
                 preco_venda,
                 lucro_esperado,
                 quebras,
+                valor_quebras,
                 created_at
             FROM cargas
             ORDER BY created_at DESC
@@ -57,6 +58,7 @@ impl CargaRepository {
                 preco_venda,
                 lucro_esperado,
                 quebras,
+                valor_quebras,
                 created_at
             FROM cargas
             WHERE id = ?
@@ -90,9 +92,10 @@ impl CargaRepository {
                 preco_venda,
                 lucro_esperado,
                 quebras,
+                valor_quebras,
                 created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ",
             params![
                 carga.id,
@@ -102,6 +105,7 @@ impl CargaRepository {
                 carga.preco_venda,
                 carga.lucro_esperado,
                 carga.quebras,
+                carga.valor_quebras,
                 carga.created_at
             ],
         )?;

@@ -8,6 +8,7 @@ interface CriarCargaDTO {
   custo_unitario: number;
   preco_venda: number;
   quebras?: number;
+  valor_quebras?: number;
   created_at?: string;
   updated_at?: string;
   retornaveis?: number;
@@ -18,6 +19,7 @@ export async function criarCargaService(data: CriarCargaDTO) {
   const custoUnitario = Number(data.custo_unitario);
   const precoVenda = Number(data.preco_venda);
   const quebras = Number(data.quebras) || 0;
+  const valorQuebras = Number(data.valor_quebras) || 0;
 
   // validações
   if (!data.produto.trim()) {
@@ -39,7 +41,9 @@ export async function criarCargaService(data: CriarCargaDTO) {
   const lucroCalculado = calcularLucro(
     precoVenda,
     custoUnitario,
-    quantidade
+    quantidade,
+    quebras,
+    valorQuebras,
   );
 
   const cargaId = crypto.randomUUID();
@@ -54,6 +58,7 @@ export async function criarCargaService(data: CriarCargaDTO) {
     preco_venda: precoVenda,
     lucro_esperado: lucroCalculado,
     quebras,
+    valor_quebras: valorQuebras,
     created_at: new Date().toISOString(),
   });
   console.log("Carga criada");

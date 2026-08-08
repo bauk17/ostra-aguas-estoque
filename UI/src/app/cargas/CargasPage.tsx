@@ -4,6 +4,7 @@ import {
   Droplets,
   Truck,
   CircleDollarSign,
+  AlertCircle,
   Edit3,
   Trash2,
   TrendingUp,
@@ -17,6 +18,7 @@ import { listarCargasService } from '../../features/estoque/services/listarCarga
 import { deletarCarga } from '../../features/estoque/repository';
 import type { Carga } from '../../features/estoque/types';
 import AddCargaModal from '../../features/estoque/components/AddCarga';
+import { calcularCustoQuebras, calcularLucro } from '../../features/estoque/utils/calcularLucro';
 
 export default function CargasPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -117,7 +119,22 @@ export default function CargasPage() {
 
   const totalQuantidade = cargasFiltradas.reduce((acc, curr) => acc + curr.quantidade, 0);
   const valorTotalEstoque = cargasFiltradas.reduce((acc, curr) => acc + curr.quantidade * curr.custo_unitario, 0);
-  const lucroProjetado = cargasFiltradas.reduce((acc, curr) => acc + (curr.lucro_esperado || 0), 0);
+  const valorTotalQuebras = cargasFiltradas.reduce(
+    (acc, curr) => acc + calcularCustoQuebras(curr.quebras ?? 0, curr.valor_quebras ?? 0),
+    0,
+  );
+  const lucroProjetado = cargasFiltradas.reduce(
+    (acc, curr) =>
+      acc +
+      calcularLucro(
+        curr.preco_venda ?? 0,
+        curr.custo_unitario,
+        curr.quantidade,
+        curr.quebras ?? 0,
+        curr.valor_quebras ?? 0,
+      ),
+    0,
+  );
 
   return (
     <div className="p-8 space-y-6 font-manrope min-h-screen bg-[#f9f9f9]">
@@ -186,10 +203,11 @@ export default function CargasPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         <StatCard title="Total em Cargas" value={totalQuantidade.toString()} icon={<Droplets className="text-blue-600" />} iconBg="bg-blue-50" />
         <StatCard title="Entradas" value={cargasFiltradas.length.toString()} icon={<Truck className="text-purple-600" />} iconBg="bg-purple-50" />
         <StatCard title="Investimento" value={`R$ ${valorTotalEstoque.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={<CircleDollarSign className="text-cyan-600" />} iconBg="bg-cyan-50" />
+        <StatCard title="Total em Quebras" value={`R$ ${valorTotalQuebras.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={<AlertCircle className="text-red-600" />} iconBg="bg-red-50" />
         <StatCard title="Lucro Projetado" value={`R$ ${lucroProjetado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={<TrendingUp className="text-green-600" />} iconBg="bg-green-50" />
       </div>
 
@@ -281,6 +299,13 @@ interface ProductRowProps {
 
 function ProductRow({ carga, onDeletar }: ProductRowProps) {
   const dataFormatada = new Date(carga.created_at || '').toLocaleDateString('pt-BR');
+  const lucroLiquido = calcularLucro(
+    carga.preco_venda ?? 0,
+    carga.custo_unitario,
+    carga.quantidade,
+    carga.quebras ?? 0,
+    carga.valor_quebras ?? 0,
+  );
 
   return (
     <tr className="hover:bg-blue-50/30 transition-colors group">
@@ -288,7 +313,7 @@ function ProductRow({ carga, onDeletar }: ProductRowProps) {
       <td className="px-6 py-4">{carga.quantidade}</td>
       <td className="px-6 py-4">R$ {carga.custo_unitario.toFixed(2)}</td>
       <td className="px-6 py-4">R$ {carga.preco_venda?.toFixed(2)}</td>
-      <td className="px-6 py-4 text-emerald-600 font-bold">R$ {carga.lucro_esperado?.toFixed(2)}</td>
+      <td className="px-6 py-4 text-emerald-600 font-bold">R$ {lucroLiquido.toFixed(2)}</td>
       <td className="px-6 py-4 text-red-500 font-medium">{carga.quebras || 0} un</td>
       <td className="px-6 py-4 text-slate-400">{dataFormatada}</td>
       <td className="px-6 py-4 text-right">

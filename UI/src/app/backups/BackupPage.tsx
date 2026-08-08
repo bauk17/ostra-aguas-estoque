@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { confirm, save, open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import {
   Database,
@@ -10,9 +11,6 @@ import {
   Share,
   Upload
 } from "lucide-react";
-
-import { save } from "@tauri-apps/plugin-dialog";
-import { open } from "@tauri-apps/plugin-dialog";
 import { appConfigDir, join } from "@tauri-apps/api/path"; 
 const ITENS_POR_PAGINA = 5;
 
@@ -30,8 +28,7 @@ export default function BackupsPage() {
   async function carregarBackups() {
     try {
       const resultado = await invoke<BackupInfo[]>("listar_backups");
-      const caminho = await invoke<string>("caminho_banco");
-      console.log(caminho);
+      
       setBackups(resultado);
     } catch (error) {
       console.error(error);
@@ -86,12 +83,12 @@ export default function BackupsPage() {
   }
 
   async function excluirBackup(nome: string) {
-    const confirmar = confirm(`Deseja realmente excluir o backup "${nome}"?`);
+    const confirmar = await confirm(`Deseja realmente excluir o backup "${nome}"?`);
     if (!confirmar) return;
 
     try {
       await invoke("excluir_backup", {
-        nomeArquivo: nome,
+        nome,
       });
       await carregarBackups();
     } catch (error) {
@@ -108,7 +105,7 @@ export default function BackupsPage() {
   }
 
   async function restaurarBackup(nome: string) {
-    const confirmar = confirm(
+    const confirmar = await confirm(
       `Deseja restaurar o backup "${nome}"?\n\nO banco atual será substituído.`
     );
     if (!confirmar) return;
@@ -148,7 +145,7 @@ export default function BackupsPage() {
       const caminhoOrigemBackup = await join(configDir, "backups", nomeArquivo);
 
       await invoke("exportar_backup", {
-        backupPath: caminhoOrigemBackup, // 👈 Envia a origem dinâmica
+        origem: caminhoOrigemBackup, // 👈 Envia a origem dinâmica
         destino,
       });
 
@@ -173,30 +170,32 @@ export default function BackupsPage() {
   return (
     <div className="p-8 space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-[#001e40]">Backups</h1>
           <p className="text-slate-500 text-sm">Gerencie os backups do banco local.</p>
         </div>
 
-        <button
-          onClick={criarNovoBackup}
-          disabled={loading}
-          className="bg-[#00658d] hover:bg-[#005577] text-white px-5 py-3 rounded-xl font-semibold flex items-center gap-2"
-        >
-          <Download size={18} />
-          {loading ? "Criando..." : "Criar Backup"}
-          
-        </button>
+        <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+          <button
+            onClick={criarNovoBackup}
+            disabled={loading}
+            className="bg-[#00658d] hover:bg-[#005577] disabled:opacity-60 disabled:cursor-not-allowed text-white px-5 py-3 rounded-xl font-semibold flex items-center gap-2"
+          >
+            <Download size={18} />
+            {loading ? "Criando..." : "Criar Backup"}
+          </button>
 
-        <button
-          onClick={importarBackup}
-          className="bg-[#00658d] hover:bg-[#005577] text-white px-5 py-3 rounded-xl font-semibold flex items-center gap-2"
-        >
-          <Upload size={18} />
-          Importar Backup
-        </button>
-      </div>
+          <button
+            onClick={importarBackup}
+            disabled={loading}
+            className="bg-white hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed text-[#00658d] border border-[#00658d] px-5 py-3 rounded-xl font-semibold flex items-center gap-2"
+          >
+            <Upload size={18} />
+            Importar Backup
+          </button>
+        </div>
+      </header>
 
       {/* Estatísticas */}
       <div className="grid grid-cols-3 gap-4">
