@@ -191,7 +191,7 @@ const PedidosPage: React.FC = () => {
   const totalGeral = pedidos.length;
   const totalPendentes = pedidos.filter(p => p.status === 'Pendente').length;
   const totalConcluidos = pedidos.filter(p => p.status === 'Entregue').length;
-  const statusOptions: Pedido['status'][] = ['Pendente', 'Em Rota'];
+  const statusOptions: Pedido['status'][] = ['Pendente', 'Entregue'];
   const getStatusStyle = (status: string) => {
     switch (status) {
       case 'Em Rota': return 'bg-blue-100 text-blue-800';
