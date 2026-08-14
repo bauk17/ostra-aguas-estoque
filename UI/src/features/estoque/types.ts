@@ -2,6 +2,7 @@ export type Carga = {
   id: string;
   produto: string;
   quantidade: number;
+  quantidade_final: number;
   custo_unitario: number;
   preco_venda: number | null;
   lucro_esperado: number | null;

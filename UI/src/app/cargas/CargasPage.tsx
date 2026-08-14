@@ -219,6 +219,7 @@ export default function CargasPage() {
               <tr className="bg-slate-50/70">
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Produto</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Quantidade</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Quantidade Final</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Custo</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Preço de Venda</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Lucro Esperado</th>
@@ -311,6 +312,7 @@ function ProductRow({ carga, onDeletar }: ProductRowProps) {
     <tr className="hover:bg-blue-50/30 transition-colors group">
       <td className="px-6 py-4 font-bold text-[#001e40]">{carga.produto}</td>
       <td className="px-6 py-4">{carga.quantidade}</td>
+      <td className="px-6 py-4">{carga.quantidade_final}</td>
       <td className="px-6 py-4">R$ {carga.custo_unitario.toFixed(2)}</td>
       <td className="px-6 py-4">R$ {carga.preco_venda?.toFixed(2)}</td>
       <td className="px-6 py-4 text-emerald-600 font-bold">R$ {lucroLiquido.toFixed(2)}</td>

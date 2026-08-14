@@ -22,6 +22,7 @@ impl CargaRepository {
                 custo_unitario,
                 preco_venda,
                 lucro_esperado,
+                quantidade_final,
                 quebras,
                 valor_quebras,
                 created_at
@@ -57,6 +58,7 @@ impl CargaRepository {
                 custo_unitario,
                 preco_venda,
                 lucro_esperado,
+                quantidade_final,
                 quebras,
                 valor_quebras,
                 created_at
@@ -91,11 +93,12 @@ impl CargaRepository {
                 custo_unitario,
                 preco_venda,
                 lucro_esperado,
+                quantidade_final,
                 quebras,
                 valor_quebras,
                 created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ",
             params![
                 carga.id,
@@ -104,13 +107,17 @@ impl CargaRepository {
                 carga.custo_unitario,
                 carga.preco_venda,
                 carga.lucro_esperado,
+
+                // Começa com o estoque completo
+                carga.quantidade,
+
                 carga.quebras,
                 carga.valor_quebras,
                 carga.created_at
             ],
-        )?;
+            )?;
 
-        Ok(())
+            Ok(())
     }
 
     pub fn excluir(

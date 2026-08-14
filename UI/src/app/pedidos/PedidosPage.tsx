@@ -26,12 +26,15 @@ interface Pedido {
 
   id: string;
   cliente_id?: string;
+  carga_id?: string | null;
+  carga_produto?: string | null;
   cliente: string;
   tipo: 'Corporativo' | 'Residencial';
   endereco: string;
   produto: string;
   quantidade: number;
   valor_total: string;
+  carga_created_at?: string | null;
   created_at: string;
   status: 'Em Rota' | 'Pendente' | 'Entregue' | 'Cancelado';
 }
@@ -528,6 +531,8 @@ const alterarStatus = async (
 
                 <th className="px-6 py-4">Produto</th>
 
+                <th className="px-6 py-4">Carga</th>
+
                 <th className="px-6 py-4">Quantidade</th>
 
                 <th className="px-6 py-4">Valor Total</th>
@@ -548,7 +553,7 @@ const alterarStatus = async (
 
                 <tr>
 
-                  <td colSpan={8} className="px-6 py-10 text-center text-slate-400">
+                  <td colSpan={9} className="px-6 py-10 text-center text-slate-400">
 
                     <div className="flex items-center justify-center gap-2">
 
@@ -566,7 +571,7 @@ const alterarStatus = async (
 
                 <tr>
 
-                  <td colSpan={8} className="px-6 py-10 text-center text-sm font-medium text-slate-400">
+                  <td colSpan={9} className="px-6 py-10 text-center text-sm font-medium text-slate-400">
 
                     Nenhum pedido encontrado para os filtros selecionados.
 
@@ -602,6 +607,16 @@ const alterarStatus = async (
 
                       <span className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded border border-blue-100">{pedido.produto}</span>
 
+                    </td>
+
+                    <td className="px-6 py-4">
+                      {pedido.carga_created_at ? (
+                        <span className="px-2 py-1 bg-purple-50 text-purple-700 text-[10px] font-bold rounded border border-purple-100">
+                          {formatarData(pedido.carga_created_at!)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">Sem carga</span>
+                      )}
                     </td>
 
                     <td className="px-6 py-4">{pedido.quantidade}</td>

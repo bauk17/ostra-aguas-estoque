@@ -1,7 +1,9 @@
 import { ArrowDown, Minus, Plus, ShoppingCart, UserRoundSearch, ChevronDown, Loader2, X, Save } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { atualizarPedido } from '../repository'; 
-import { listarClientes } from '../../clientes/repository'; 
+import { listarClientes } from '../../clientes/repository';
+import { listarCargas } from '../../estoque/repository';
+import type { Carga } from '../../estoque/types';
 
 interface Client {
   id: string;
@@ -11,7 +13,8 @@ interface Client {
 
 interface Pedido {
   id: string;
-  cliente_id?: string; // Mapeado para associar com o seletor
+  cliente_id?: string;
+  carga_id?: string | null;
   cliente: string;
   produto: string;
   quantidade: number;
@@ -19,6 +22,7 @@ interface Pedido {
   preco_unitario?: string | number;
   observacoes?: string;
   status: 'Em Rota' | 'Pendente' | 'Entregue' | 'Cancelado';
+  created_at?: string;
 }
 
 interface Props {
@@ -31,18 +35,21 @@ interface Props {
 export default function EditPedidoModal({ open, pedido, onClose, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
   const [loadingClientes, setLoadingClientes] = useState(false);
+  const [loadingCargas, setLoadingCargas] = useState(false);
   
   const [clientes, setClientes] = useState<Client[]>([]);
+  const [cargas, setCargas] = useState<Carga[]>([]);
   const [searchCliente, setSearchCliente] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // --- ESTADO ADAPTADO PARA STRING ---
   const [formData, setFormData] = useState({
-    cliente_id: '', 
+    cliente_id: '',
+    carga_id: '',
     produto: '',
-    quantidade: '1',     
-    preco_unitario: '18.50', 
+    quantidade: '1',
+    preco_unitario: '18.50',
     observacoes: '',
     status: 'Pendente',
   });
@@ -52,15 +59,19 @@ export default function EditPedidoModal({ open, pedido, onClose, onSuccess }: Pr
   // Carrega a lista de clientes do banco
   useEffect(() => {
     if (open) {
-      const buscarClientes = async () => {
+      const buscarDados = async () => {
         setLoadingClientes(true);
+        setLoadingCargas(true);
         try {
-          const dados = await listarClientes();
-          setClientes(dados);
+          const [dadosClientes, dadosCargas] = await Promise.all([
+            listarClientes(),
+            listarCargas(),
+          ]);
+          setClientes(dadosClientes);
+          setCargas(dadosCargas);
           
-          // Se o pedido já veio com cliente_id, tenta sincronizar o texto da busca
           if (pedido) {
-            const clienteEncontrado = dados.find((c: Client) => c.id === pedido.cliente_id || c.nome === pedido.cliente);
+            const clienteEncontrado = dadosClientes.find((c: Client) => c.id === pedido.cliente_id || c.nome === pedido.cliente);
             if (clienteEncontrado) {
               setSearchCliente(clienteEncontrado.nome);
               setFormData(prev => ({ ...prev, cliente_id: clienteEncontrado.id }));
@@ -69,12 +80,13 @@ export default function EditPedidoModal({ open, pedido, onClose, onSuccess }: Pr
             }
           }
         } catch (error) {
-          console.error("Erro ao carregar clientes para o seletor:", error);
+          console.error("Erro ao carregar dados do formulário:", error);
         } finally {
           setLoadingClientes(false);
+          setLoadingCargas(false);
         }
       };
-      buscarClientes();
+      buscarDados();
     }
   }, [open, pedido]);
 
@@ -88,6 +100,7 @@ export default function EditPedidoModal({ open, pedido, onClose, onSuccess }: Pr
 
       setFormData({
         cliente_id: pedido.cliente_id || '',
+        carga_id: pedido.carga_id || '',
         produto: pedido.produto,
         quantidade: pedido.quantidade.toString(),
         preco_unitario: precoUnit.replace('.', ','),
@@ -121,6 +134,18 @@ export default function EditPedidoModal({ open, pedido, onClose, onSuccess }: Pr
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
+
+    if (name === 'carga_id') {
+      const cargaSelecionada = cargas.find((carga) => carga.id === value);
+      setFormData((prev) => ({
+        ...prev,
+        carga_id: value,
+        produto: cargaSelecionada?.produto ?? prev.produto,
+        preco_unitario: cargaSelecionada?.preco_venda?.toFixed(2).replace('.', ',') ?? prev.preco_unitario,
+      }));
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -146,6 +171,11 @@ export default function EditPedidoModal({ open, pedido, onClose, onSuccess }: Pr
       return;
     }
 
+    if (!formData.carga_id) {
+      alert("Por favor, selecione uma carga existente.");
+      return;
+    }
+
     const qtdFinal = parseFloat(formData.quantidade);
     const precoFinal = parseFloat(formData.preco_unitario.replace(',', '.'));
 
@@ -162,7 +192,17 @@ export default function EditPedidoModal({ open, pedido, onClose, onSuccess }: Pr
 
     try {
       // Executa a atualização passando o ID original do pedido
-      await atualizarPedido(pedido.id);
+      await atualizarPedido({
+        id: pedido.id,
+        cliente_id: formData.cliente_id,
+        carga_id: formData.carga_id,
+        produto: formData.produto,
+        quantidade: qtdFinal,
+        preco_unitario: precoFinal,
+        valor_total: valorTotal,
+        status: formData.status,
+        created_at: pedido.created_at ?? new Date().toISOString(),
+      });
 
       if (onSuccess) onSuccess();
       onClose();
@@ -256,6 +296,32 @@ export default function EditPedidoModal({ open, pedido, onClose, onSuccess }: Pr
                 )}
               </div>
             )}
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-[#001e40] ml-1">Carga</label>
+            <div className="relative">
+              <select
+                name="carga_id"
+                value={formData.carga_id}
+                onChange={handleInputChange}
+                required
+                disabled={loadingCargas}
+                className="w-full pl-4 pr-10 py-3.5 bg-slate-50 border border-slate-200 rounded-xl appearance-none focus:ring-4 focus:ring-blue-100 focus:border-[#00658d] transition-all outline-none text-sm font-semibold text-slate-800 disabled:opacity-60"
+              >
+                <option value="" disabled>
+                  {loadingCargas ? 'Carregando cargas...' : 'Selecione uma carga'}
+                </option>
+                {cargas.map((carga) => (
+                  <option key={carga.id} value={carga.id}>
+                    {carga.produto} — {carga.quantidade} un — {new Date(carga.created_at).toLocaleDateString('pt-BR')}
+                  </option>
+                ))}
+              </select>
+              <span className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
+                <ChevronDown size={18} />
+              </span>
+            </div>
           </div>
 
           {/* Produto e Quantidade */}

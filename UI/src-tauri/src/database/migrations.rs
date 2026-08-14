@@ -74,7 +74,8 @@ pub fn run_migrations(conn: &Connection) -> Result<(), String> {
             preco_unitario REAL NOT NULL,
             valor_total REAL NOT NULL,
             status TEXT DEFAULT 'pendente',
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            carga_id TEXT
         );
 
         "#
@@ -82,6 +83,18 @@ pub fn run_migrations(conn: &Connection) -> Result<(), String> {
     .map_err(|e| e.to_string())?;
 
     add_column_if_not_exists(conn, "cargas", "valor_quebras", "REAL DEFAULT 0")?;
+    add_column_if_not_exists(conn, "cargas", "quantidade_final", "INTEGER")?;
+    add_column_if_not_exists(conn, "pedidos", "carga_id", "TEXT")?;
+
+    conn.execute(
+    "
+    UPDATE cargas
+    SET quantidade_final = quantidade
+    WHERE quantidade_final IS NULL
+    ",
+    [],
+    )
+    .map_err(|e| e.to_string())?;
 
     Ok(())
 }

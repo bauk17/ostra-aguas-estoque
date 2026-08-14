@@ -12,6 +12,7 @@ pub struct Carga {
     pub quebras: Option<i64>,
     pub valor_quebras: Option<f64>,
     pub created_at: String,
+    pub quantidade_final: Option<i64>,
 }
 
 impl Carga {
@@ -26,6 +27,7 @@ impl Carga {
             quebras: row.get("quebras")?,
             valor_quebras: row.get("valor_quebras")?,
             created_at: row.get("created_at")?,
+            quantidade_final: row.get("quantidade_final")?,
         })
     }
 }

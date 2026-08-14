@@ -10,6 +10,7 @@ pub struct Pedido {
     pub preco_unitario: f64,
     pub valor_total: f64,
     pub status: String,
+    pub carga_id: Option<String>,
     pub created_at: String,
 }
 
@@ -23,6 +24,7 @@ impl Pedido {
             preco_unitario: row.get("preco_unitario")?,
             valor_total: row.get("valor_total")?,
             status: row.get("status")?,
+            carga_id: row.get("carga_id")?,
             created_at: row.get("created_at")?,
         })
     }

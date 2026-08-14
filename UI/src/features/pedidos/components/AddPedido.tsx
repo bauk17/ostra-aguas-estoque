@@ -1,7 +1,9 @@
 import { ArrowDown, Minus, Plus, ShoppingCart, UserRoundSearch, ChevronDown, Loader2, X, Save } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { criarPedido } from '../repository';
-import { listarClientes } from '../../clientes/repository'; 
+import { listarClientes } from '../../clientes/repository';
+import { listarCargas } from '../../estoque/repository';
+import type { Carga } from '../../estoque/types';
 
 interface Client {
   id: string;
@@ -18,38 +20,47 @@ interface Props {
 export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
   const [loadingClientes, setLoadingClientes] = useState(false);
+  const [loadingCargas, setLoadingCargas] = useState(false);
   
   const [clientes, setClientes] = useState<Client[]>([]);
+  const [cargas, setCargas] = useState<Carga[]>([]);
   const [searchCliente, setSearchCliente] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // --- ESTADO ADAPTADO PARA STRING ---
   const [formData, setFormData] = useState({
-    cliente_id: '', 
+    cliente_id: '',
+    carga_id: '',
     produto: '',
-    quantidade: '1',     
-    preco_unitario: '18.50', 
+    quantidade: '1',
+    preco_unitario: '18.50',
     observacoes: '',
-    status: 'Pendente', // Novo campo adicionado ao estado
+    status: 'Pendente',
   });
 
   const [valorTotal, setValorTotal] = useState(18.50);
 
   useEffect(() => {
     if (open) {
-      const buscarClientes = async () => {
+      const buscarDados = async () => {
         setLoadingClientes(true);
+        setLoadingCargas(true);
         try {
-          const dados = await listarClientes();
-          setClientes(dados);
+          const [dadosClientes, dadosCargas] = await Promise.all([
+            listarClientes(),
+            listarCargas(),
+          ]);
+          setClientes(dadosClientes);
+          setCargas(dadosCargas);
         } catch (error) {
-          console.error("Erro ao carregar clientes para o seletor:", error);
+          console.error("Erro ao carregar dados do formulário:", error);
         } finally {
           setLoadingClientes(false);
+          setLoadingCargas(false);
         }
       };
-      buscarClientes();
+      buscarDados();
     }
   }, [open]);
 
@@ -76,6 +87,18 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
+
+    if (name === 'carga_id') {
+      const cargaSelecionada = cargas.find((carga) => carga.id === value);
+      setFormData((prev) => ({
+        ...prev,
+        carga_id: value,
+        produto: cargaSelecionada?.produto ?? prev.produto,
+        preco_unitario: cargaSelecionada?.preco_venda?.toFixed(2) ?? prev.preco_unitario,
+      }));
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -104,6 +127,11 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
       return;
     }
 
+    if (!formData.carga_id) {
+      alert("Por favor, selecione uma carga existente.");
+      return;
+    }
+
     const qtdFinal = parseFloat(formData.quantidade);
     const precoFinal = parseFloat(formData.preco_unitario.replace(',', '.'));
 
@@ -121,24 +149,26 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
     try {
       await criarPedido({
         id: crypto.randomUUID(),
-        cliente_id: formData.cliente_id, 
+        cliente_id: formData.cliente_id,
+        carga_id: formData.carga_id,
         produto: formData.produto,
         quantidade: qtdFinal,
         preco_unitario: precoFinal,
         valor_total: valorTotal,
-        status: formData.status, // Agora utiliza o valor selecionado dinamicamente
+        status: formData.status,
         created_at: new Date(),
       });
 
       if (onSuccess) onSuccess();
 
-      setFormData({ 
-        cliente_id: '', 
-        produto: '', 
-        quantidade: '1', 
-        preco_unitario: '18.50', 
-        observacoes: '', 
-        status: 'Pendente' 
+      setFormData({
+        cliente_id: '',
+        carga_id: '',
+        produto: '',
+        quantidade: '1',
+        preco_unitario: '18.50',
+        observacoes: '',
+        status: 'Pendente'
       });
       setSearchCliente('');
       onClose();
@@ -232,6 +262,33 @@ export default function AddPedidoModal({ open, onClose, onSuccess }: Props) {
                 )}
               </div>
             )}
+          </div>
+
+          {/* Carga vinculada */}
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-[#001e40] ml-1">Carga</label>
+            <div className="relative">
+              <select
+                name="carga_id"
+                value={formData.carga_id}
+                onChange={handleInputChange}
+                required
+                disabled={loadingCargas}
+                className="w-full pl-4 pr-10 py-3.5 bg-slate-50 border border-slate-200 rounded-xl appearance-none focus:ring-4 focus:ring-blue-100 focus:border-[#00658d] transition-all outline-none text-sm font-semibold text-slate-800 disabled:opacity-60"
+              >
+                <option value="" disabled>
+                  {loadingCargas ? 'Carregando cargas...' : 'Selecione uma carga'}
+                </option>
+                {cargas.map((carga) => (
+                  <option key={carga.id} value={carga.id}>
+                    {carga.produto} — {carga.quantidade} un — {new Date(carga.created_at).toLocaleDateString('pt-BR')}
+                  </option>
+                ))}
+              </select>
+              <span className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
+                <ChevronDown size={18} />
+              </span>
+            </div>
           </div>
 
           {/* Produto e Quantidade Livre */}
