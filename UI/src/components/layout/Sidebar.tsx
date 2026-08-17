@@ -1,7 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Package, Users, ShoppingCart, NotebookText } from 'lucide-react';
+import { LayoutDashboard, Package, Users, ShoppingCart, NotebookText, Download, RefreshCw } from 'lucide-react';
+import { useUpdateCheck } from '../../hooks/useUpdateCheck';
 
 export const Sidebar = () => {
+  const { isChecking, progress, checkForUpdates } = useUpdateCheck();
+
   return (
     <aside className="fixed left-0 top-0 h-full flex flex-col py-6 bg-slate-50 border-r border-slate-200 w-64 z-50">
       <div className="px-6 mb-8">
@@ -20,9 +23,16 @@ export const Sidebar = () => {
 
       
       
-      <div className="border-t border-slate-200 pt-4">
-        
-        
+      <div className="border-t border-slate-200 pt-4 px-2">
+        <button
+          type="button"
+          onClick={() => checkForUpdates(false)}
+          disabled={isChecking}
+          className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-blue-400 hover:bg-blue-700 transition-colors"
+        >
+          {isChecking ? <RefreshCw size={16} className="animate-spin" /> : <Download size={16} />}
+          <span>{isChecking ? (progress > 0 ? `${Math.round(progress)}%` : 'Verificando...') : 'Atualizar'}</span>
+        </button>
       </div>
     </aside>
   );
