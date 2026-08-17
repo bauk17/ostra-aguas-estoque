@@ -1,6 +1,7 @@
 
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Sidebar } from "./components/layout/Sidebar";
+import { Header } from "./components/layout/Header";
 import DashboardPage from "./app/dashboard/DashboardPage";
 import CargasPage from "./app/cargas/CargasPage";
 import ClientesPage from "./app/clientes/ClientesPage";
@@ -18,16 +19,15 @@ function App() {
         <Sidebar />
 
         <main className="flex-1 ml-64">
+          <Header />
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/cargas" element={<CargasPage />} />
-            
-            {/* Rota para Clientes (você pode criar o ClientesPage depois) */}
+
             <Route path="/clientes" element={<ClientesPage />} />
             <Route path="/pedidos" element={<PedidosPage />} />
             <Route path="/movimentacoes" element={<MovimentacoesPage />} />
-            {/* Fallback para rotas não encontradas */}
             <Route path="*" element={<Navigate to="/dashboard" />} />
 
             <Route path="/backups" element={<BackupPage />} />

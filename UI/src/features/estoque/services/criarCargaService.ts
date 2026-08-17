@@ -54,6 +54,7 @@ export async function criarCargaService(data: CriarCargaDTO) {
     id: cargaId,
     produto: data.produto,
     quantidade,
+    quantidade_final: quantidade,
     custo_unitario: custoUnitario,
     preco_venda: precoVenda,
     lucro_esperado: lucroCalculado,
