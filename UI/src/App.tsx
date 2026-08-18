@@ -1,7 +1,6 @@
 
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Sidebar } from "./components/layout/Sidebar";
-import { useUpdateCheck } from "./hooks/useUpdateCheck";
 import DashboardPage from "./app/dashboard/DashboardPage";
 import CargasPage from "./app/cargas/CargasPage";
 import ClientesPage from "./app/clientes/ClientesPage";
@@ -10,9 +9,6 @@ import MovimentacoesPage from "./app/movimentacoes/MovimentacoesPage";
 import BackupPage from "./app/backups/BackupPage";
 
 function App() {
-  // Hook que verifica atualizações automaticamente ao iniciar
-  useUpdateCheck();
-
   return (
     <BrowserRouter>
       <div className="flex min-h-screen bg-background">
