@@ -7,8 +7,27 @@ import ClientesPage from "./app/clientes/ClientesPage";
 import PedidosPage from "./app/pedidos/PedidosPage";
 import MovimentacoesPage from "./app/movimentacoes/MovimentacoesPage";
 import BackupPage from "./app/backups/BackupPage";
+import { ouvirClientes } from "./services/supabaseRealtimeService";
+import { useEffect } from "react";
 
 function App() {
+
+  useEffect(() => {
+    const unsubscribe = ouvirClientes(
+      (cliente) => {  
+        console.log('Cliente inserido:', cliente);
+      },
+      (cliente) => {
+        console.log('Cliente atualizado:', cliente);
+      },
+      (cliente) => {
+        console.log('Cliente excluído:', cliente);
+      }
+    );
+
+    return unsubscribe;
+  }, []);
+
   return (
     <BrowserRouter>
       <div className="flex min-h-screen bg-background">

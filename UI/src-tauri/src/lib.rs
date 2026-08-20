@@ -4,6 +4,7 @@ mod database;
 mod models;
 mod repositories;
 mod services;
+mod sync;
 
 use backup::*;
 use commands::carga::*;
@@ -25,6 +26,9 @@ pub fn run() {
         .setup(|app| {
             let db = DbState::new(app.handle())?;
             app.manage(db);
+
+            sync::realtime::start_listener();
+
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
