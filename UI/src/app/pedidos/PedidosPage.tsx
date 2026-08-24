@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { listen } from '@tauri-apps/api/event';
 
 import {
 
@@ -111,6 +112,28 @@ const PedidosPage: React.FC = () => {
 
     carregarPedidos();
 
+  }, []);
+
+  useEffect(() => {
+    let ativo = true;
+    let removerListener: (() => void) | undefined;
+
+    listen<{ table: string; event: string }>('pedido-sync', ({ payload }) => {
+      if (ativo && payload.table === 'pedidos') {
+        void carregarPedidos();
+      }
+    }).then((unlisten) => {
+      if (ativo) {
+        removerListener = unlisten;
+      } else {
+        unlisten();
+      }
+    });
+
+    return () => {
+      ativo = false;
+      removerListener?.();
+    };
   }, []);
 
 

@@ -1,8 +1,20 @@
+use tauri::{AppHandle, Emitter, Manager};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{json, Value};
 use std::time::Duration;
 use tokio::time::{interval, MissedTickBehavior};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
+
+use crate::{
+    database::connection::DbState,
+    sync::cliente_sync,
+    
+};
+
+use crate::sync::carga_sync;
+
+use crate::sync::pedido_sync;
+
 
 const HEARTBEAT_INTERVAL: u64 = 20;
 
@@ -13,12 +25,12 @@ const TABLES: [&str; 4] = [
     "movimentacoes",
 ];
 
-pub fn start_listener() {
+pub fn start_listener(app: AppHandle) {
     dotenvy::dotenv().ok();
 
-    tauri::async_runtime::spawn(async {
+    tauri::async_runtime::spawn(async move {
         loop {
-            match connect_and_listen().await {
+            match connect_and_listen(&app).await {
                 Ok(_) => {
                     println!(
                         "[SUPABASE] Connection closed. Reconnecting..."
@@ -42,7 +54,7 @@ pub fn start_listener() {
     });
 }
 
-async fn connect_and_listen() -> Result<(), String> {
+async fn connect_and_listen(app: &AppHandle) -> Result<(), String> {
     let supabase_url = std::env::var("SUPABASE_URL")
         .map_err(|_| "SUPABASE_URL not set".to_string())?;
 
@@ -126,6 +138,71 @@ async fn connect_and_listen() -> Result<(), String> {
         "[SUPABASE] Sent phx_join message to Supabase Realtime."
     );
 
+
+    while let Some(message) = read.next().await {
+
+        match message {
+
+            Ok(Message::Text(text)) => {
+
+                println!(
+                    "[SUPABASE] Message received: {}",
+                    text
+                );
+
+                processar_mensagem(
+                    &app,
+                    &text
+                );
+            }
+
+
+            Ok(Message::Ping(payload)) => {
+
+                println!(
+                    "[SUPABASE] Ping received."
+                );
+
+                write
+                    .send(Message::Pong(payload))
+                    .await
+                    .map_err(|e| {
+                        format!(
+                            "Failed to send Pong: {:?}",
+                            e
+                        )
+                    })?;
+            }
+
+
+            Ok(Message::Close(frame)) => {
+
+                println!(
+                    "[SUPABASE] WebSocket closed: {:?}",
+                    frame
+                );
+
+                break;
+            }
+
+
+            Ok(_) => {}
+
+
+            Err(error) => {
+
+                return Err(
+                    format!(
+                        "WebSocket error: {:?}",
+                        error
+                    )
+                );
+            }
+        }
+    }
+
+
+
     // =====================================================
     // HEARTBEAT
     // =====================================================
@@ -166,7 +243,7 @@ async fn connect_and_listen() -> Result<(), String> {
                             text
                         );
 
-                        processar_mensagem(&text);
+                        processar_mensagem(&app, &text);
                     }
 
                     Some(Ok(Message::Ping(data))) => {
@@ -270,7 +347,7 @@ async fn connect_and_listen() -> Result<(), String> {
 // PROCESSAMENTO DAS MENSAGENS
 // =========================================================
 
-fn processar_mensagem(text: &str) {
+fn processar_mensagem(app: &AppHandle, text: &str,) {
 
     let mensagem: Value =
         match serde_json::from_str(text) {
@@ -307,7 +384,7 @@ fn processar_mensagem(text: &str) {
         }
 
         "postgres_changes" => {
-            processar_postgres_change(&mensagem);
+            processar_postgres_change(app, &mensagem);
         }
 
         "system" => {
@@ -382,7 +459,7 @@ fn processar_phx_reply(mensagem: &Value) {
 // POSTGRES CHANGES
 // =========================================================
 
-fn processar_postgres_change(mensagem: &Value) {
+fn processar_postgres_change(app: &AppHandle, mensagem: &Value) {
 
     let payload = match mensagem.get("payload") {
 
@@ -510,9 +587,88 @@ fn processar_postgres_change(mensagem: &Value) {
     }
 
 
+    if table == "clientes" {
+        let registro = match event {
+
+            "DELETE" => &old_record,
+
+            _ => &record,
+        };
+
+        let db = app.state::<DbState>();
+
+        if let Err(error) = cliente_sync::processar(
+            &db,
+            event,
+            registro
+        ) {
+            eprintln!(
+                "[SYNC] Erro ao processar evento para clientes: {}",
+                error
+            );
+        }
+    }
+
+
+    if table == "cargas" {
+        let registro = match event {
+
+            "DELETE" => &old_record,
+
+            _ => &record,
+        };
+
+        let db = app.state::<DbState>();
+
+        if let Err(error) = crate::sync::carga_sync::processar(
+            &db,
+            event,
+            registro
+        ) {
+            eprintln!(
+                "[SYNC] Erro ao processar evento para cargas: {}",
+                error
+            );
+        }
+    }
+
     println!(
         "========================================\n"
     );
+
+    if table == "pedidos" {
+        let registro = match event {
+
+            "DELETE" => &old_record,
+
+            _ => &record,
+        };
+
+        let db = app.state::<DbState>();
+
+        if let Err(error) = crate::sync::pedido_sync::processar(
+            &db,
+            event,
+            registro
+        ) {
+            eprintln!(
+                "[SYNC] Erro ao processar evento para pedidos: {}",
+                error
+            );
+        } else if let Err(error) = app.emit(
+            "pedido-sync",
+            json!({
+                "table": table,
+                "event": event,
+                "record": registro,
+            }),
+        ) {
+            eprintln!(
+                "[SYNC] Pedido sincronizado, mas não foi possível notificar a UI: {}",
+                error
+            );
+        }
+    }
 }
 
 

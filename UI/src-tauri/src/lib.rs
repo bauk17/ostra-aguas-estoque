@@ -27,7 +27,7 @@ pub fn run() {
             let db = DbState::new(app.handle())?;
             app.manage(db);
 
-            sync::realtime::start_listener();
+            sync::realtime::start_listener(app.handle().clone());
 
             Ok(())
         })
