@@ -15,6 +15,8 @@ use crate::sync::carga_sync;
 
 use crate::sync::pedido_sync;
 
+use crate::sync::movimentacao_sync;
+
 
 const HEARTBEAT_INTERVAL: u64 = 20;
 
@@ -665,6 +667,41 @@ fn processar_postgres_change(app: &AppHandle, mensagem: &Value) {
         ) {
             eprintln!(
                 "[SYNC] Pedido sincronizado, mas não foi possível notificar a UI: {}",
+                error
+            );
+        }
+    }
+
+
+    if table == "movimentacoes" {
+        let registro = match event {
+
+            "DELETE" => &old_record,
+
+            _ => &record,
+        };
+
+        let db = app.state::<DbState>();
+
+        if let Err(error) = movimentacao_sync::processar(
+            &db,
+            event,
+            registro
+        ) {
+            eprintln!(
+                "[SYNC] Erro ao processar evento para movimentacoes: {}",
+                error
+            );
+        } else if let Err(error) = app.emit(
+            "movimentacao-sync",
+            json!({
+                "table": table,
+                "event": event,
+                "record": registro,
+            }),
+        ) {
+            eprintln!(
+                "[SYNC] Movimentacao sincronizada, mas não foi possível notificar a UI: {}",
                 error
             );
         }
