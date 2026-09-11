@@ -1,54 +1,89 @@
 # Ostra Águas Estoque
 
-Aplicativo desktop com Tauri + React + TypeScript.
+Aplicativo para gerenciamento de estoque, cargas, clientes, pedidos e movimentações da Ostra Águas, com versões desktop e mobile.
 
-## Auto-updater com GitHub Releases
+Desenvolvido com **Tauri 2**, **React**, **React Native**, **TypeScript**, **Rust**, **SQLite** e **Supabase**.
 
-Este projeto está configurado para usar o updater do Tauri com GitHub Releases.
+## Tecnologias
 
-### Requisitos
+### Desktop
 
-1. Ter uma chave de assinatura do Tauri criada localmente.
-2. Configurar os secrets no GitHub:
-   - `TAURI_SIGNING_PRIVATE_KEY`
-   - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (opcional)
-3. O app deve estar publicado em um repositório do GitHub com Releases habilitados.
+- React 19
+- TypeScript
+- Vite
+- Tauri 2
+- Rust
+- SQLite
+- `rusqlite`
 
-### Gerar a chave de assinatura
+### Mobile
 
-```bash
-cd UI
-npm run tauri signer generate -- -w ~/.tauri/ostra-aguas-estoque.key
-```
+- React Native
+- Expo
+- TypeScript
+- Expo Router
+- Expo SQLite
 
-Depois, copie o conteúdo da chave pública para o arquivo `UI/src-tauri/tauri.conf.json` no campo `plugins.updater.pubkey`.
+### Sincronização e infraestrutura
 
-### Publicar uma versão
+- Supabase
+- PostgreSQL
+- Supabase Realtime
+- GitHub Actions
 
-1. Atualize a versão no `UI/package.json`
-2. Atualize a versão no `UI/src-tauri/tauri.conf.json`
-3. Faça commit e push para a branch `release`
-4. O GitHub Actions vai gerar a release e os artefatos do updater
+## Funcionalidades
 
-### Observações
+- Dashboard
+- Gerenciamento de cargas
+- Gerenciamento de clientes
+- Gerenciamento de pedidos
+- Gerenciamento de movimentações
+- Controle de estoque
+- Cálculo de custos, preços e lucros esperados
+- Status de pedidos
+- Backup do banco de dados
+- Funcionamento offline
+- Sincronização entre dispositivos
+- Atualizações automáticas do aplicativo desktop
 
-- O GitHub Release cria o `latest.json` automaticamente para o updater.
-- O frontend usa o endpoint do GitHub Releases para verificar atualizações.
-- A assinatura dos artefatos precisa corresponder à chave pública configurada no Tauri.
+### Status de pedidos
 
-### Exemplo de configuração de updater no Tauri
+Os pedidos podem assumir os seguintes estados:
 
-No arquivo `UI/src-tauri/tauri.conf.json`:
+- `Pendente`
+- `Em Rota`
+- `Entregue`
+- `Cancelado`
 
-```json
-{
-  "plugins": {
-    "updater": {
-      "pubkey": "PUBLIC_KEY_HERE",
-      "endpoints": [
-        "https://github.com/<usuario>/<repositorio>/releases/latest/download/latest.json"
-      ]
-    }
-  }
-}
-```
+---
+
+## Arquitetura
+
+O sistema utiliza uma arquitetura híbrida, na qual **Desktop e Mobile mantêm bancos SQLite locais** para permitir o funcionamento offline.
+
+O **Supabase** atua como camada compartilhada de sincronização entre os dispositivos, utilizando PostgreSQL para armazenamento remoto e Supabase Realtime para distribuição das alterações.
+
+```text
+┌──────────────────────────────┐
+│           Mobile             │
+│      React Native / Expo     │
+│                              │
+│         SQLite local         │
+└──────────────┬───────────────┘
+               │
+               │ Sincronização
+               ▼
+┌──────────────────────────────┐
+│          Supabase            │
+│                              │
+│   PostgreSQL + Realtime      │
+└──────────────┬───────────────┘
+               │
+               │ Sincronização / Realtime
+               ▼
+┌──────────────────────────────┐
+│          Desktop             │
+│      Tauri + React           │
+│                              │
+│         SQLite local         │
+└──────────────────────────────┘
