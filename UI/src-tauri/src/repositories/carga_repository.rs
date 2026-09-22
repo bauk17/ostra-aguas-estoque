@@ -83,6 +83,20 @@ impl CargaRepository {
 
         let conn = db.conn.lock().unwrap();
 
+        Self::criar_na_conexao(
+            &conn,
+            carga,
+        )
+    }
+
+
+
+
+    pub fn criar_na_conexao(
+        conn: &rusqlite::Connection,
+        carga: &Carga,
+    ) -> Result<()> {
+
         conn.execute(
             "
             INSERT INTO cargas
@@ -115,9 +129,9 @@ impl CargaRepository {
                 carga.valor_quebras,
                 carga.created_at
             ],
-            )?;
+        )?;
 
-            Ok(())
+        Ok(())
     }
 
     pub fn excluir(

@@ -77,7 +77,21 @@ pub fn run_migrations(conn: &Connection) -> Result<(), String> {
             created_at TEXT NOT NULL,
             carga_id TEXT
         );
+        
 
+        CREATE TABLE IF NOT EXISTS sync_queue (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entity TEXT NOT NULL,
+            entity_id TEXT NOT NULL,
+            operation TEXT NOT NULL,
+            payload TEXT,
+            created_at TEXT NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            last_error TEXT,
+            next_retry_at TEXT,
+            status TEXT NOT NULL DEFAULT 'PENDING'
+        );
+        
         "#
     )
     .map_err(|e| e.to_string())?;

@@ -97,6 +97,14 @@ export default function DashboardPage() {
             <div>
               <h2 className="font-headline-lg text-3xl font-bold text-primary">Gerenciamento de Pedidos</h2>
               <p className="text-body-md text-slate-500">Visão geral das operações de hoje.</p>
+              <button
+                onClick={async () => {
+                  const fila = await invoke("reabrir_sync_queue", { id: 49})
+                  console.log(fila)
+                }}
+              >
+                CLICA AI
+              </button>
             </div>
           </div>
 

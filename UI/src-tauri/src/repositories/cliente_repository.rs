@@ -1,4 +1,4 @@
-use rusqlite::{params, Result};
+use rusqlite::{params, Connection, Result};
 
 use crate::{
     database::connection::DbState,
@@ -73,31 +73,9 @@ impl ClienteRepository {
         db: &DbState,
         cliente: &Cliente,
     ) -> Result<()> {
-
         let conn = db.conn.lock().unwrap();
 
-        conn.execute(
-            "
-            INSERT INTO clientes
-            (
-                id,
-                nome,
-                telefone,
-                endereco,
-                created_at
-            )
-            VALUES (?, ?, ?, ?, ?)
-            ",
-            params![
-                cliente.id,
-                cliente.nome,
-                cliente.telefone,
-                cliente.endereco,
-                cliente.created_at
-            ],
-        )?;
-
-        Ok(())
+        Self::criar_na_conexao(&conn, cliente)
     }
 
     /// Atualiza um cliente
@@ -145,5 +123,74 @@ impl ClienteRepository {
         )?;
 
         Ok(())
+    }
+
+
+    pub fn criar_na_conexao(
+        conn: &Connection,
+        cliente: &Cliente,
+    ) -> Result<()> {
+        conn.execute(
+            "
+            INSERT INTO clientes
+            (
+                id,
+                nome,
+                telefone,
+                endereco,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?)
+            ",
+            params![
+                cliente.id,
+                cliente.nome,
+                cliente.telefone,
+                cliente.endereco,
+                cliente.created_at
+            ],
+        )?;
+
+        Ok(())
+    }
+
+    pub fn atualizar_na_conexao(
+        conn: &Connection,
+        cliente: &Cliente,
+    ) -> Result<()> {
+        conn.execute(
+            "
+            UPDATE clientes
+            SET
+                nome = ?,
+                telefone = ?,
+                endereco = ?
+            WHERE id = ?
+            ",
+            params![
+                cliente.nome,
+                cliente.telefone,
+                cliente.endereco,
+                cliente.id
+            ],
+        )?;
+
+     Ok(())
+    }
+
+
+    pub fn excluir_na_conexao(
+        conn: &Connection,
+        id: &str,
+    ) -> Result<()> {
+        conn.execute(
+            "
+            DELETE FROM clientes
+            WHERE id = ?
+            ",
+            params![id],
+        )?;
+
+     Ok(())
     }
 }

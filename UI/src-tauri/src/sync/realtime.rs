@@ -72,8 +72,7 @@ async fn connect_and_listen(app: &AppHandle) -> Result<(), String> {
     );
 
     println!(
-        "[SUPABASE] Connecting to Supabase Realtime at: {}",
-        websocket_url
+        ""
     );
 
     let (ws_stream, _) = connect_async(&websocket_url)
@@ -86,7 +85,7 @@ async fn connect_and_listen(app: &AppHandle) -> Result<(), String> {
         })?;
 
     println!(
-        "[SUPABASE] Connected to Supabase Realtime."
+        ""
     );
 
     let (mut write, mut read) = ws_stream.split();
@@ -136,21 +135,13 @@ async fn connect_and_listen(app: &AppHandle) -> Result<(), String> {
             )
         })?;
 
-    println!(
-        "[SUPABASE] Sent phx_join message to Supabase Realtime."
-    );
-
+   
 
     while let Some(message) = read.next().await {
 
         match message {
 
             Ok(Message::Text(text)) => {
-
-                println!(
-                    "[SUPABASE] Message received: {}",
-                    text
-                );
 
                 processar_mensagem(
                     &app,
@@ -180,8 +171,7 @@ async fn connect_and_listen(app: &AppHandle) -> Result<(), String> {
             Ok(Message::Close(frame)) => {
 
                 println!(
-                    "[SUPABASE] WebSocket closed: {:?}",
-                    frame
+                    ""
                 );
 
                 break;
@@ -299,7 +289,7 @@ async fn connect_and_listen(app: &AppHandle) -> Result<(), String> {
                     None => {
 
                         println!(
-                            "[SUPABASE] WebSocket stream ended."
+                            ""
                         );
 
                         return Ok(());
@@ -392,8 +382,7 @@ fn processar_mensagem(app: &AppHandle, text: &str,) {
         "system" => {
 
             println!(
-                "[SUPABASE] SYSTEM: {}",
-                mensagem
+                ""
             );
         }
 
@@ -440,11 +429,11 @@ fn processar_phx_reply(mensagem: &Value) {
     if status == "ok" {
 
         println!(
-            "[SUPABASE] Realtime conectado com sucesso."
+            ""
         );
 
         println!(
-            "[SUPABASE] Inscrição nas tabelas confirmada."
+            ""
         );
 
     } else {

@@ -14,6 +14,7 @@ use commands::pedido::*;
 use commands::vendas_mes::{obter_metricas_dashboard, obter_vendas_mes};
 use tauri::Manager;
 use database::connection::DbState;
+use commands::sync::*;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -28,6 +29,12 @@ pub fn run() {
             app.manage(db);
 
             sync::realtime::start_listener(app.handle().clone());
+
+            let app_handle = app.handle().clone();
+
+            tauri::async_runtime::spawn(async move {
+                sync::worker::iniciar_worker(app_handle).await;
+            });
 
             Ok(())
         })
@@ -75,6 +82,12 @@ pub fn run() {
             exportar_backup,
             importar_backup,
             restaurar_backup,
+
+
+            // SYNC
+            listar_sync_queue,
+            reabrir_sync_queue,
+          
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

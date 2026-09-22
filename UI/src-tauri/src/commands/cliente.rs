@@ -34,8 +34,33 @@ pub fn criar_cliente(
     cliente: Cliente,
 ) -> Result<(), String> {
 
-    ClienteRepository::criar(&db, &cliente)
-        .map_err(|e| e.to_string())
+    let mut conn = db.conn.lock().unwrap();
+
+    let tx = conn
+        .transaction()
+        .map_err(|e| e.to_string())?;
+
+    let payload = serde_json::to_value(&cliente)
+        .map_err(|e| e.to_string())?;
+
+    ClienteRepository::criar_na_conexao(
+        &tx,
+        &cliente,
+    )
+    .map_err(|e| e.to_string())?;
+
+    crate::sync::sync_queue::adicionar(
+        &tx,
+        "clientes",
+        &cliente.id,
+        "INSERT",
+        Some(&payload),
+    )?;
+
+    tx.commit()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
 }
 
 
@@ -45,8 +70,33 @@ pub fn atualizar_cliente(
     cliente: Cliente,
 ) -> Result<(), String> {
 
-    ClienteRepository::atualizar(&db, &cliente)
-        .map_err(|e| e.to_string())
+    let mut conn = db.conn.lock().unwrap();
+
+    let tx = conn
+        .transaction()
+        .map_err(|e| e.to_string())?;
+
+    let payload = serde_json::to_value(&cliente)
+        .map_err(|e| e.to_string())?;
+
+    ClienteRepository::atualizar_na_conexao(
+        &tx,
+        &cliente,
+    )
+    .map_err(|e| e.to_string())?;
+
+    crate::sync::sync_queue::adicionar(
+        &tx,
+        "clientes",
+        &cliente.id,
+        "UPDATE",
+        Some(&payload),
+    )?;
+
+    tx.commit()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -55,6 +105,28 @@ pub fn excluir_cliente(
     id: String,
 ) -> Result<(), String> {
 
-    ClienteRepository::excluir(&db, &id)
-        .map_err(|e| e.to_string())
+    let mut conn = db.conn.lock().unwrap();
+
+    let tx = conn
+        .transaction()
+        .map_err(|e| e.to_string())?;
+
+    ClienteRepository::excluir_na_conexao(
+        &tx,
+        &id,
+    )
+    .map_err(|e| e.to_string())?;
+
+    crate::sync::sync_queue::adicionar(
+        &tx,
+        "clientes",
+        &id,
+        "DELETE",
+        None,
+    )?;
+
+    tx.commit()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
 }

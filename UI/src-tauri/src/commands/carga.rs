@@ -21,8 +21,33 @@ pub fn criar_carga(
     carga: Carga,
 ) -> Result<(), String> {
 
-    CargaRepository::criar(&db, &carga)
-        .map_err(|e| e.to_string())
+    let mut conn = db.conn.lock().unwrap();
+
+    let tx = conn
+        .transaction()
+        .map_err(|e| e.to_string())?;
+
+    let payload = serde_json::to_value(&carga)
+        .map_err(|e| e.to_string())?;
+
+    CargaRepository::criar_na_conexao(
+        &tx,
+        &carga,
+    )
+    .map_err(|e| e.to_string())?;
+
+    crate::sync::sync_queue::adicionar(
+        &tx,
+        "cargas",
+        &carga.id,
+        "INSERT",
+        Some(&payload),
+    )?;
+
+    tx.commit()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
 }
 
 #[tauri::command]
