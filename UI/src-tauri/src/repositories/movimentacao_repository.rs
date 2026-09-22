@@ -81,6 +81,16 @@ impl MovimentacaoRepository {
 
         let conn = Repository::conn(db);
 
+        Self::criar_na_conexao(
+            &conn,
+            movimentacao,
+        )
+    }
+    pub fn criar_na_conexao(
+        conn: &rusqlite::Connection,
+        movimentacao: &Movimentacao,
+    ) -> Result<()> {
+
         conn.execute(
             "
             INSERT INTO movimentacoes
@@ -115,6 +125,18 @@ impl MovimentacaoRepository {
     ) -> Result<()> {
 
         let conn = Repository::conn(db);
+
+        Self::excluir_na_conexao(
+            &conn,
+            id,
+        )
+    }
+
+
+    pub fn excluir_na_conexao(
+        conn: &rusqlite::Connection,
+        id: &str,
+    ) -> Result<()> {
 
         conn.execute(
             "

@@ -60,9 +60,16 @@ impl PedidoRepository {
         db: &DbState,
         id: &str,
     ) -> Result<Option<Pedido>> {
-
         let conn = Repository::conn(db);
 
+        Self::buscar_por_id_na_conexao(&conn, id)
+    }
+
+
+    pub fn buscar_por_id_na_conexao(
+        conn: &rusqlite::Connection,
+        id: &str,
+    ) -> Result<Option<Pedido>> {
         let mut stmt = conn.prepare(
             "
             SELECT
@@ -141,9 +148,15 @@ impl PedidoRepository {
         db: &DbState,
         pedido: &Pedido,
     ) -> Result<()> {
-
         let conn = Repository::conn(db);
 
+        Self::atualizar_na_conexao(&conn, pedido)
+    }
+
+    pub fn atualizar_na_conexao(
+        conn: &rusqlite::Connection,
+        pedido: &Pedido,
+    ) -> Result<()> {
         conn.execute(
             "
             UPDATE pedidos
@@ -176,168 +189,202 @@ impl PedidoRepository {
     // ALTERAR STATUS
     // ============================
    pub fn atualizar_status(
-    db: &DbState,
-    id: &str,
-    novo_status: &str,
-) -> Result<()> {
+        db: &DbState,
+        id: &str,
+        novo_status: &str,
+    ) -> Result<()> {
 
-    let mut conn = db.conn.lock().unwrap();
+        let mut conn = db.conn.lock().unwrap();
 
-    let tx = conn.transaction()?;
+        let tx = conn.transaction()?;
 
-    // =====================================================
-    // BUSCA O PEDIDO
-    // =====================================================
+        // =====================================================
+        // BUSCA O PEDIDO
+        // =====================================================
 
-    let (status_atual, carga_id, quantidade): (
-        String,
-        Option<String>,
-        i64,
-    ) = tx.query_row(
-        "
-        SELECT
-            status,
-            carga_id,
-            quantidade
-        FROM pedidos
-        WHERE id = ?
-        ",
-        [id],
-        |row| {
-            Ok((
-                row.get(0)?,
-                row.get(1)?,
-                row.get(2)?,
-            ))
-        },
-    )?;
-
-    println!("======================================");
-    println!("ALTERAÇÃO DE STATUS");
-    println!("Pedido: {}", id);
-    println!("Status atual: {}", status_atual);
-    println!("Novo status: {}", novo_status);
-    println!("Carga: {:?}", carga_id);
-    println!("Quantidade pedido: {}", quantidade);
-
-    // =====================================================
-    // STATUS NÃO MUDOU
-    // =====================================================
-
-    if status_atual == novo_status {
-        println!("Status não mudou.");
-        tx.commit()?;
-        return Ok(());
-    }
-
-    // =====================================================
-    // SOMENTE ENTREGUE DESCONTA DA CARGA
-    // =====================================================
-
-    if novo_status.trim().to_lowercase() == "entregue" {
-
-        println!("Pedido sendo marcado como ENTREGUE.");
-
-        let carga_id = carga_id.as_ref().ok_or_else(|| {
-            rusqlite::Error::InvalidParameterName(
-                "Pedido não possui uma carga associada.".into()
-            )
-        })?;
-
-        // Busca estoque restante
-        let quantidade_final: Option<i64> = tx.query_row(
+        let (status_atual, carga_id, quantidade): (
+            String,
+            Option<String>,
+            i64,
+        ) = tx.query_row(
             "
-            SELECT quantidade_final
-            FROM cargas
+            SELECT
+                status,
+                carga_id,
+                quantidade
+            FROM pedidos
             WHERE id = ?
             ",
-            [carga_id],
-            |row| row.get(0),
+            [id],
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                ))
+            },
         )?;
 
-        println!(
-            "Quantidade final antes do desconto: {:?}",
-            quantidade_final
-        );
+        println!("======================================");
+        println!("ALTERAÇÃO DE STATUS");
+        println!("Pedido: {}", id);
+        println!("Status atual: {}", status_atual);
+        println!("Novo status: {}", novo_status);
+        println!("Carga: {:?}", carga_id);
+        println!("Quantidade pedido: {}", quantidade);
 
-        let quantidade_final = quantidade_final.ok_or_else(|| {
-            rusqlite::Error::InvalidParameterName(
-                "A carga não possui quantidade_final.".into()
-            )
-        })?;
+        // =====================================================
+        // STATUS NÃO MUDOU
+        // =====================================================
 
-        // =================================================
-        // VERIFICA ESTOQUE
-        // =================================================
+        if status_atual == novo_status {
+            println!("Status não mudou.");
+            tx.commit()?;
+            return Ok(());
+        }
 
-        if quantidade_final < quantidade {
-            return Err(
+        // =====================================================
+        // SOMENTE ENTREGUE DESCONTA DA CARGA
+        // =====================================================
+
+        if novo_status.trim().to_lowercase() == "entregue" {
+
+            println!("Pedido sendo marcado como ENTREGUE.");
+
+            let carga_id = carga_id.as_ref().ok_or_else(|| {
                 rusqlite::Error::InvalidParameterName(
-                    format!(
-                        "Quantidade insuficiente na carga. Disponível: {}, necessário: {}",
-                        quantidade_final,
-                        quantidade
-                    )
+                    "Pedido não possui uma carga associada.".into()
                 )
+            })?;
+
+            // Busca estoque restante
+            let quantidade_final: Option<i64> = tx.query_row(
+                "
+                SELECT quantidade_final
+                FROM cargas
+                WHERE id = ?
+                ",
+                [carga_id],
+                |row| row.get(0),
+            )?;
+
+            println!(
+                "Quantidade final antes do desconto: {:?}",
+                quantidade_final
+            );
+
+            let quantidade_final = quantidade_final.ok_or_else(|| {
+                rusqlite::Error::InvalidParameterName(
+                    "A carga não possui quantidade_final.".into()
+                )
+            })?;
+
+            // =================================================
+            // VERIFICA ESTOQUE
+            // =================================================
+
+            if quantidade_final < quantidade {
+                return Err(
+                    rusqlite::Error::InvalidParameterName(
+                        format!(
+                            "Quantidade insuficiente na carga. Disponível: {}, necessário: {}",
+                            quantidade_final,
+                            quantidade
+                        )
+                    )
+                );
+            }
+
+            // =================================================
+            // DESCONTA SOMENTE quantidade_final
+            // =================================================
+
+            let alterados = tx.execute(
+                "
+                UPDATE cargas
+                SET quantidade_final = quantidade_final - ?
+                WHERE id = ?
+                ",
+                rusqlite::params![
+                    quantidade,
+                    carga_id,
+                ],
+            )?;
+
+            println!(
+                "Linhas de carga alteradas: {}",
+                alterados
+            );
+
+            println!(
+                "Quantidade final depois: {}",
+                quantidade_final - quantidade
+            );
+        } else {
+
+            println!(
+                "Status '{}' não desconta estoque.",
+                novo_status
             );
         }
 
-        // =================================================
-        // DESCONTA SOMENTE quantidade_final
-        // =================================================
+        // =====================================================
+        // ATUALIZA STATUS DO PEDIDO
+        // =====================================================
 
-        let alterados = tx.execute(
+        tx.execute(
             "
-            UPDATE cargas
-            SET quantidade_final = quantidade_final - ?
+            UPDATE pedidos
+            SET status = ?
             WHERE id = ?
             ",
             rusqlite::params![
-                quantidade,
-                carga_id,
+                novo_status,
+                id,
             ],
         )?;
 
-        println!(
-            "Linhas de carga alteradas: {}",
-            alterados
-        );
+        tx.commit()?;
 
-        println!(
-            "Quantidade final depois: {}",
-            quantidade_final - quantidade
-        );
-    } else {
+        println!("Status atualizado com sucesso.");
+        println!("======================================");
 
-        println!(
-            "Status '{}' não desconta estoque.",
-            novo_status
-        );
+        Ok(())
     }
 
-    // =====================================================
-    // ATUALIZA STATUS DO PEDIDO
-    // =====================================================
 
-    tx.execute(
-        "
-        UPDATE pedidos
-        SET status = ?
-        WHERE id = ?
-        ",
-        rusqlite::params![
-            novo_status,
-            id,
-        ],
-    )?;
+    pub fn atualizar_na_transaction(
+        tx: &rusqlite::Transaction<'_>,
+        pedido: &Pedido,
+    ) -> Result<()> {
+        tx.execute(
+            "
+            UPDATE pedidos
+            SET
+                cliente_id = ?,
+                produto = ?,
+                quantidade = ?,
+                preco_unitario = ?,
+                valor_total = ?,
+                status = ?,
+                carga_id = ?
+            WHERE id = ?
+            ",
+            params![
+                pedido.cliente_id,
+                pedido.produto,
+                pedido.quantidade,
+                pedido.preco_unitario,
+                pedido.valor_total,
+                pedido.status,
+                pedido.carga_id,
+                pedido.id
+            ],
+        )?;
 
-    tx.commit()?;
+        Ok(())
+    }
 
-    println!("Status atualizado com sucesso.");
-    println!("======================================");
-
-    Ok(())
-}
 
     // ============================
     // EXCLUIR
@@ -359,5 +406,8 @@ impl PedidoRepository {
 
         Ok(())
     }
+
+
+    
 
 }

@@ -10,6 +10,7 @@ pub fn processar(db: &DbState, event: &str, record: &Value) -> Result<(), String
 
     match event {
         "INSERT" => inserir(db, record),
+        "UPDATE" => atualizar(db, record),
         "DELETE" => excluir(db, record),
 
         _ => Err(format!(
@@ -53,6 +54,25 @@ fn inserir(
 
     Ok(())
 }
+
+
+fn atualizar(
+    db: &DbState,
+    record: &Value,
+) -> Result<(), String> {
+    let carga = converter_carga(record)?;
+
+    CargaRepository::atualizar_por_sync(db, &carga)
+        .map_err(|e| e.to_string())?;
+
+    println!(
+        "[SYNC] Carga {} atualizada no SQLite.",
+        carga.id
+    );
+
+    Ok(())
+}
+
 
 fn excluir(
     db: &DbState,

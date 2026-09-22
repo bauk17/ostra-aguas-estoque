@@ -21,8 +21,33 @@ pub fn criar_movimentacao(
     movimentacao: Movimentacao,
 ) -> Result<(), String> {
 
-    MovimentacaoRepository::criar(&db, &movimentacao)
-        .map_err(|e| e.to_string())
+    let mut conn = db.conn.lock().unwrap();
+
+    let tx = conn
+        .transaction()
+        .map_err(|e| e.to_string())?;
+
+    let payload = serde_json::to_value(&movimentacao)
+        .map_err(|e| e.to_string())?;
+
+    MovimentacaoRepository::criar_na_conexao(
+        &tx,
+        &movimentacao,
+    )
+    .map_err(|e| e.to_string())?;
+
+    crate::sync::sync_queue::adicionar(
+        &tx,
+        "movimentacoes",
+        &movimentacao.id,
+        "INSERT",
+        Some(&payload),
+    )?;
+
+    tx.commit()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -31,6 +56,28 @@ pub fn excluir_movimentacao(
     id: String,
 ) -> Result<(), String> {
 
-    MovimentacaoRepository::excluir(&db, &id)
-        .map_err(|e| e.to_string())
+    let mut conn = db.conn.lock().unwrap();
+
+    let tx = conn
+        .transaction()
+        .map_err(|e| e.to_string())?;
+
+    MovimentacaoRepository::excluir_na_conexao(
+        &tx,
+        &id,
+    )
+    .map_err(|e| e.to_string())?;
+
+    crate::sync::sync_queue::adicionar(
+        &tx,
+        "movimentacoes",
+        &id,
+        "DELETE",
+        None,
+    )?;
+
+    tx.commit()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
 }

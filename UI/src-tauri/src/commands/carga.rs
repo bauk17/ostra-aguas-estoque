@@ -66,6 +66,28 @@ pub fn excluir_carga(
     id: String,
 ) -> Result<(), String> {
 
-    CargaRepository::excluir(&db, &id)
-        .map_err(|e| e.to_string())
+    let mut conn = db.conn.lock().unwrap();
+
+    let tx = conn
+        .transaction()
+        .map_err(|e| e.to_string())?;
+
+    CargaRepository::excluir_na_conexao(
+        &tx,
+        &id,
+    )
+    .map_err(|e| e.to_string())?;
+
+    crate::sync::sync_queue::adicionar(
+        &tx,
+        "cargas",
+        &id,
+        "DELETE",
+        None,
+    )?;
+
+    tx.commit()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
 }

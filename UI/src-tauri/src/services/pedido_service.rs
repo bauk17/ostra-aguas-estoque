@@ -204,16 +204,21 @@ impl PedidoService {
         // ATUALIZA O STATUS DO PEDIDO
         // =====================================================
 
-        tx.execute(
-            "
-            UPDATE pedidos
-            SET status = ?
-            WHERE id = ?
-            ",
-            rusqlite::params![
-                novo_status,
-                id,
-            ],
+        let pedido = PedidoRepository::buscar_por_id_na_conexao(&tx, id)?
+            .ok_or_else(|| {
+                rusqlite::Error::InvalidParameterName(
+                    format!("Pedido não encontrado: {}", id),
+                )
+            })?;
+
+        let pedido_atualizado = Pedido {
+            status: novo_status.to_string(),
+            ..pedido
+        };
+
+        PedidoRepository::atualizar_na_transaction(
+            &tx,
+            &pedido_atualizado,
         )?;
 
         tx.commit()?;
