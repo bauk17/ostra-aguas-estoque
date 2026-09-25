@@ -132,6 +132,7 @@ impl SupabaseClient {
             .delete(&url)
             .header("apikey", &self.api_key)
             .header("Content-Type", "application/json")
+            .header("Prefer", "return=representation")
             .send()
             .await
             .map_err(|e| {
@@ -152,6 +153,32 @@ impl SupabaseClient {
                 "[SUPABASE] API retornou {}: {}",
                 status,
                 body
+            ));
+        }
+
+        let body = response
+            .text()
+            .await
+            .map_err(|e| {
+                format!(
+                    "[SUPABASE] Não foi possível ler a resposta do DELETE: {}",
+                    e
+                )
+            })?;
+
+        let registros: Vec<Value> = serde_json::from_str(&body)
+            .map_err(|e| {
+                format!(
+                    "[SUPABASE] Resposta inválida no DELETE: {}",
+                    e
+                )
+            })?;
+
+        if registros.is_empty() {
+            return Err(format!(
+                "[SUPABASE] DELETE de {} com id {} não excluiu nenhuma linha.",
+                tabela,
+                id
             ));
         }
 

@@ -7,6 +7,7 @@ pub struct Cliente {
     pub nome: String,
     pub telefone: Option<String>,
     pub endereco: Option<String>,
+    pub observacoes: Option<String>,
     pub created_at: String,
 }
 
@@ -17,6 +18,7 @@ impl Cliente {
             nome: row.get("nome")?,
             telefone: row.get("telefone")?,
             endereco: row.get("endereco")?,
+            observacoes: row.get("observacoes")?,
             created_at: row.get("created_at")?,
         })
     }

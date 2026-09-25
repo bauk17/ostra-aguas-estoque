@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { listen } from '@tauri-apps/api/event';
 import { 
   Search, 
   UserPlus, 
@@ -51,6 +52,28 @@ const ClientesPage = () => {
 
   useEffect(() => {
     carregarClientes();
+  }, []);
+
+  useEffect(() => {
+    let ativo = true;
+    let removerListener: (() => void) | undefined;
+
+    listen<{ table: string; event: string }>('cliente-sync', ({ payload }) => {
+      if (ativo && payload.table === 'clientes') {
+        void carregarClientes();
+      }
+    }).then((unlisten) => {
+      if (ativo) {
+        removerListener = unlisten;
+      } else {
+        unlisten();
+      }
+    });
+
+    return () => {
+      ativo = false;
+      removerListener?.();
+    };
   }, []);
 
   // Reseta para a primeira página quando o usuário filtra/pesquisa algo

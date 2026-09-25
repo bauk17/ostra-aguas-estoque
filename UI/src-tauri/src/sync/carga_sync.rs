@@ -41,9 +41,12 @@ fn inserir(
             carga.id
         );
 
+        CargaRepository::atualizar_por_sync(db, &carga)
+        .map_err(|e| e.to_string())?;
+
     } else {
 
-        CargaRepository::criar(db, &carga)
+        CargaRepository::criar_por_sync(db, &carga)
             .map_err(|e| e.to_string())?;
         
         println!(

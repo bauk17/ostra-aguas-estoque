@@ -21,6 +21,7 @@ impl ClienteRepository {
                 nome,
                 telefone,
                 endereco,
+                observacoes,
                 created_at
             FROM clientes
             ORDER BY nome
@@ -53,6 +54,7 @@ impl ClienteRepository {
                 nome,
                 telefone,
                 endereco,
+                observacoes,
                 created_at
             FROM clientes
             WHERE id = ?
@@ -92,13 +94,15 @@ impl ClienteRepository {
             SET
                 nome = ?,
                 telefone = ?,
-                endereco = ?
+                endereco = ?,
+                observacoes = ?
             WHERE id = ?
             ",
             params![
                 cliente.nome,
                 cliente.telefone,
                 cliente.endereco,
+                cliente.observacoes,
                 cliente.id
             ],
         )?;
@@ -138,15 +142,17 @@ impl ClienteRepository {
                 nome,
                 telefone,
                 endereco,
+                observacoes,
                 created_at
             )
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?)
             ",
             params![
                 cliente.id,
                 cliente.nome,
                 cliente.telefone,
                 cliente.endereco,
+                cliente.observacoes,
                 cliente.created_at
             ],
         )?;
@@ -164,14 +170,16 @@ impl ClienteRepository {
             SET
                 nome = ?,
                 telefone = ?,
-                endereco = ?
+                endereco = ?,
+                observacoes = ?
             WHERE id = ?
             ",
             params![
                 cliente.nome,
                 cliente.telefone,
                 cliente.endereco,
-                cliente.id
+                cliente.observacoes,
+                cliente.id,
             ],
         )?;
 

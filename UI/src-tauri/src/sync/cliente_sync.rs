@@ -162,6 +162,13 @@ fn converter_cliente(
         .map(String::from);
 
 
+    let observacoes = record
+        .get("observacoes")
+        .and_then(Value::as_str)
+        .map(String::from);
+
+    
+
     let created_at = record
         .get("created_at")
         .and_then(Value::as_str)
@@ -176,6 +183,7 @@ fn converter_cliente(
         nome,
         telefone,
         endereco,
+        observacoes,
         created_at,
     })
 }

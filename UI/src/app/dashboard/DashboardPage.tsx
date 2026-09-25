@@ -99,7 +99,7 @@ export default function DashboardPage() {
               <p className="text-body-md text-slate-500">Visão geral das operações de hoje.</p>
               <button
                 onClick={async () => {
-                  const fila = await invoke("reabrir_sync_queue", { id: 49})
+                  const fila = await invoke("listar_sync_queue");
                   console.log(fila)
                 }}
               >

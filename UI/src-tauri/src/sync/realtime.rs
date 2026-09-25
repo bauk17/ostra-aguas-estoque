@@ -137,63 +137,6 @@ async fn connect_and_listen(app: &AppHandle) -> Result<(), String> {
 
    
 
-    while let Some(message) = read.next().await {
-
-        match message {
-
-            Ok(Message::Text(text)) => {
-
-                processar_mensagem(
-                    &app,
-                    &text
-                );
-            }
-
-
-            Ok(Message::Ping(payload)) => {
-
-                println!(
-                    "[SUPABASE] Ping received."
-                );
-
-                write
-                    .send(Message::Pong(payload))
-                    .await
-                    .map_err(|e| {
-                        format!(
-                            "Failed to send Pong: {:?}",
-                            e
-                        )
-                    })?;
-            }
-
-
-            Ok(Message::Close(frame)) => {
-
-                println!(
-                    ""
-                );
-
-                break;
-            }
-
-
-            Ok(_) => {}
-
-
-            Err(error) => {
-
-                return Err(
-                    format!(
-                        "WebSocket error: {:?}",
-                        error
-                    )
-                );
-            }
-        }
-    }
-
-
 
     // =====================================================
     // HEARTBEAT
@@ -597,6 +540,18 @@ fn processar_postgres_change(app: &AppHandle, mensagem: &Value) {
                 "[SYNC] Erro ao processar evento para clientes: {}",
                 error
             );
+        } else if let Err(error) = app.emit(
+            "cliente-sync",
+            json!({
+                "table": table,
+                "event": event,
+                "record": registro,
+            }),
+        ) {
+            eprintln!(
+                "[SYNC] Cliente sincronizado, mas não foi possível notificar a UI: {}",
+                error
+            );
         }
     }
 
@@ -618,6 +573,18 @@ fn processar_postgres_change(app: &AppHandle, mensagem: &Value) {
         ) {
             eprintln!(
                 "[SYNC] Erro ao processar evento para cargas: {}",
+                error
+            );
+        } else if let Err(error) = app.emit(
+            "carga-sync",
+            json!({
+                "table": table,
+                "event": event,
+                "record": registro,
+            }),
+        ) {
+            eprintln!(
+                "[SYNC] Carga sincronizada, mas não foi possível notificar a UI: {}",
                 error
             );
         }

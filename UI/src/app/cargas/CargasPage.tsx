@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { listen } from '@tauri-apps/api/event';
 import {
   PlusSquare,
   Droplets,
@@ -49,6 +50,28 @@ export default function CargasPage() {
 
   useEffect(() => {
     fetchCargas();
+  }, []);
+
+  useEffect(() => {
+    let ativo = true;
+    let removerListener: (() => void) | undefined;
+
+    listen<{ table: string; event: string }>('carga-sync', ({ payload }) => {
+      if (ativo && payload.table === 'cargas') {
+        void fetchCargas();
+      }
+    }).then((unlisten) => {
+      if (ativo) {
+        removerListener = unlisten;
+      } else {
+        unlisten();
+      }
+    });
+
+    return () => {
+      ativo = false;
+      removerListener?.();
+    };
   }, []);
 
   // --- NOVA FUNÇÃO PARA DELETAR CARGA ---

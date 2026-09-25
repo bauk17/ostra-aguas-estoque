@@ -145,6 +145,46 @@ impl CargaRepository {
         Ok(())
     }
 
+    pub fn criar_por_sync(
+        db: &DbState,
+        carga: &Carga,
+    ) -> Result<()> {
+        let conn = db.conn.lock().unwrap();
+
+        conn.execute(
+            "
+            INSERT INTO cargas
+            (
+                id,
+                produto,
+                quantidade,
+                custo_unitario,
+                preco_venda,
+                lucro_esperado,
+                quantidade_final,
+                quebras,
+                valor_quebras,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ",
+            params![
+                carga.id,
+                carga.produto,
+                carga.quantidade,
+                carga.custo_unitario,
+                carga.preco_venda,
+                carga.lucro_esperado,
+                carga.quantidade_final,
+                carga.quebras,
+                carga.valor_quebras,
+                carga.created_at
+            ],
+        )?;
+
+        Ok(())
+    }
+
 
     pub fn atualizar_por_sync(
         db: &DbState,

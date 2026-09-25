@@ -99,6 +99,12 @@ pub fn run_migrations(conn: &Connection) -> Result<(), String> {
     add_column_if_not_exists(conn, "cargas", "valor_quebras", "REAL DEFAULT 0")?;
     add_column_if_not_exists(conn, "cargas", "quantidade_final", "INTEGER")?;
     add_column_if_not_exists(conn, "pedidos", "carga_id", "TEXT")?;
+    add_column_if_not_exists(
+        conn,
+        "clientes",
+        "observacoes",
+        "TEXT"
+    )?;
 
     conn.execute(
     "

@@ -5,7 +5,10 @@ use crate::{
     models::pedido::Pedido,
     models::pedidoView::PedidoView,
     repositories::pedido_repository::PedidoRepository,
+    repositories::carga_repository::CargaRepository,
+
 };
+
 
 pub struct PedidoService;
 
@@ -118,6 +121,30 @@ impl PedidoService {
             ],
         )?;
 
+
+        let payload = serde_json::to_value(pedido)
+        .map_err(|e| {
+            rusqlite::Error::InvalidParameterName(
+                format!(
+                    "Erro ao serializar pedido para sincronização: {}",
+                    e
+                )
+            )
+        })?;
+
+        crate::sync::sync_queue::adicionar(
+            &tx,
+            "pedidos",
+            &pedido.id,
+            "INSERT",
+            Some(&payload),
+        )
+        .map_err(|e| {
+            rusqlite::Error::InvalidParameterName(
+                format!("Erro ao adicionar pedido à fila: {}", e)
+            )
+        })?;
+
         tx.commit()?;
 
         Ok(())
@@ -127,16 +154,80 @@ impl PedidoService {
         db: &DbState,
         pedido: &Pedido,
     ) -> Result<()> {
+        let mut conn = db.conn.lock().unwrap();
 
-        PedidoRepository::atualizar(db, pedido)
+        let tx = conn.transaction()?;
+
+        // Atualiza o pedido no SQLite
+        PedidoRepository::atualizar_na_transaction(
+            &tx,
+            pedido,
+        )?;
+
+        // Prepara o payload para sincronização
+        let payload = serde_json::to_value(pedido)
+            .map_err(|e| {
+                rusqlite::Error::InvalidParameterName(
+                    format!(
+                        "Erro ao serializar pedido para sincronização: {}",
+                        e
+                    )
+                )
+            })?;
+
+        // Adiciona a atualização à fila
+        crate::sync::sync_queue::adicionar(
+            &tx,
+            "pedidos",
+            &pedido.id,
+            "UPDATE",
+            Some(&payload),
+        )
+        .map_err(|e| {
+            rusqlite::Error::InvalidParameterName(
+                format!(
+                    "Erro ao adicionar pedido à fila: {}",
+                    e
+                )
+            )
+        })?;
+
+        tx.commit()?;
+
+        Ok(())
     }
 
     pub fn excluir(
         db: &DbState,
         id: &str,
     ) -> Result<()> {
+        let mut conn = db.conn.lock().unwrap();
 
-        PedidoRepository::excluir(db, id)
+        let tx = conn.transaction()?;
+
+        // Exclui o pedido do SQLite
+        tx.execute(
+            "DELETE FROM pedidos WHERE id = ?",
+            [id],
+        )?;
+
+        // Adiciona a operação de DELETE na fila
+        crate::sync::sync_queue::adicionar(
+            &tx,
+            "pedidos",
+            id,
+            "DELETE",
+            None,
+        )
+        .map_err(|e| {
+            rusqlite::Error::InvalidParameterName(
+                format!("Erro ao adicionar exclusão do pedido à fila: {}", e)
+            )
+        })?;
+
+        tx.commit()?;
+
+        Ok(())
     }
 
     pub fn atualizar_status(
@@ -198,6 +289,39 @@ impl PedidoService {
             })?;
 
             descontar_estoque_da_carga(&tx, carga_id, quantidade)?;
+
+
+
+            let carga_atualizada =
+                CargaRepository::buscar_por_id_na_conexao(&tx, carga_id)?
+                    .ok_or_else(|| {
+                        rusqlite::Error::InvalidParameterName(
+                            format!("Carga não encontrada: {}", carga_id),
+                        )
+                    })?;
+
+            let payload = serde_json::to_value(&carga_atualizada)
+                .map_err(|e| {
+                    rusqlite::Error::InvalidParameterName(
+                        format!(
+                            "Erro ao serializar carga para sincronização: {}",
+                            e
+                        )
+                    )
+                })?;
+
+            crate::sync::sync_queue::adicionar(
+                &tx,
+                "cargas",
+                &carga_atualizada.id,
+                "UPDATE",
+                Some(&payload),
+            )
+            .map_err(|e| {
+                rusqlite::Error::InvalidParameterName(
+                    format!("Erro ao adicionar carga à fila: {}", e)
+                )
+            })?;
         }
 
         // =====================================================
@@ -220,6 +344,27 @@ impl PedidoService {
             &tx,
             &pedido_atualizado,
         )?;
+
+
+        let payload = serde_json::to_value(&pedido_atualizado)
+        .map_err(|e| {
+            rusqlite::Error::InvalidParameterName(
+                format!("Erro ao serializar pedido para sincronização: {}", e)
+            )
+        })?;
+
+        crate::sync::sync_queue::adicionar(
+            &tx,
+            "pedidos",
+            &pedido_atualizado.id,
+            "UPDATE",
+            Some(&payload),
+        )
+        .map_err(|e| {
+            rusqlite::Error::InvalidParameterName(
+                format!("Erro ao adicionar pedido à fila: {}", e)
+            )
+        })?;
 
         tx.commit()?;
 

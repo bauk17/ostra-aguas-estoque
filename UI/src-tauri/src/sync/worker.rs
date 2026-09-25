@@ -56,53 +56,77 @@ pub async fn processar_proxima_operacao(
 
     let supabase = SupabaseClient::new()?;
 
-    let resultado = match item.operation.as_str() {
-        "INSERT" => {
-            let payload = payload.ok_or_else(|| {
-                format!(
-                    "[SYNC] INSERT {} não possui payload.",
-                    item.id
+    let resultado = async {
+        let payload = match item.payload.as_deref() {
+            Some(payload_string) => {
+                Some(
+                    serde_json::from_str::<serde_json::Value>(
+                        payload_string,
+                    )
+                    .map_err(|e| {
+                        format!(
+                            "[SYNC] Payload inválido na operação {}: {}",
+                            item.id,
+                            e
+                        )
+                    })?,
                 )
-            })?;
+            }
 
-            supabase
-                .inserir(&item.entity, &payload)
-                .await
+            None => None,
+        };
+
+        let supabase = SupabaseClient::new()?;
+
+        match item.operation.as_str() {
+            "INSERT" => {
+                let payload = payload.ok_or_else(|| {
+                    format!(
+                        "[SYNC] INSERT {} não possui payload.",
+                        item.id
+                    )
+                })?;
+
+                supabase
+                    .inserir(&item.entity, &payload)
+                    .await
+            }
+
+            "UPDATE" => {
+                let payload = payload.ok_or_else(|| {
+                    format!(
+                        "[SYNC] UPDATE {} não possui payload.",
+                        item.id
+                    )
+                })?;
+
+                supabase
+                    .atualizar(
+                        &item.entity,
+                        &item.entity_id,
+                        &payload,
+                    )
+                    .await
+            }
+
+            "DELETE" => {
+                supabase
+                    .excluir(
+                        &item.entity,
+                        &item.entity_id,
+                    )
+                    .await
+            }
+
+            operation => {
+                Err(format!(
+                    "[SYNC] Operação ainda não implementada: {}",
+                    operation
+                ))
+            }
         }
-
-        "UPDATE" => {
-            let payload = payload.ok_or_else(|| {
-                format!(
-                    "[SYNC] UPDATE {} não possui payload.",
-                    item.id
-                )
-            })?;
-
-            supabase
-                .atualizar(
-                    &item.entity,
-                    &item.entity_id,
-                    &payload,
-                )
-                .await
-        }
-
-        "DELETE" => {
-            supabase
-                .excluir(
-                    &item.entity,
-                    &item.entity_id,
-                )
-                .await
-        }
-
-        operation => {
-            Err(format!(
-                "[SYNC] Operação ainda não implementada: {}",
-                operation
-            ))
-        }
-    };
+    }
+    .await;
 
     if let Err(error) = resultado {
         let conn = db.conn.lock().unwrap();
